@@ -26,6 +26,9 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"stacktrace-dict":     "stacktrace-dict",
 		"symbol-table":        "symbol-table",
 		"table-tsv":           "table-tsv",
+		"text-norm":           "text-norm",
+		"html-entity":         "html-entity",
+		"base64-compact":      "base64-compact",
 	}
 	wantAliases := map[string][]string{
 		"stacktrace-dict": {"stacktrace"},

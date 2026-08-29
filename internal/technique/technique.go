@@ -10,12 +10,14 @@ type Definition struct {
 
 var definitions = []Definition{
 	{ID: "ansi", CodecID: "ansi-strip"},
+	{ID: "base64-compact", CodecID: "base64-compact"},
 	{ID: "block", CodecID: "block-factor"},
 	{ID: "block-pack", CodecID: "block-pack"},
 	{ID: "cr", CodecID: "cr-render"},
 	{ID: "csv-canonical", CodecID: "csv-canonical"},
 	{ID: "dedup", CodecID: "dedup-sha256"},
 	{ID: "diff-log-fold", CodecID: "diff-log-fold"},
+	{ID: "html-entity", CodecID: "html-entity"},
 	{ID: "jcs", CodecID: "jcs"},
 	{ID: "json-compact", CodecID: "json-compact"},
 	{ID: "json-number", CodecID: "json-number"},
@@ -28,8 +30,6 @@ var definitions = []Definition{
 	{ID: "symbol-table", CodecID: "symbol-table"},
 	{ID: "table-tsv", CodecID: "table-tsv"},
 	{ID: "text-norm", CodecID: "text-norm"},
-	{ID: "html-entity", CodecID: "html-entity"},
-	{ID: "base64-compact", CodecID: "base64-compact"},
 }
 
 var names = buildNames()
