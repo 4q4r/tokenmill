@@ -152,10 +152,7 @@ func normalizeDecimalNumber(raw string) (decimalNumber, error) {
 	mantissa := raw
 	if index := strings.IndexAny(raw, "eE"); index >= 0 {
 		mantissa = raw[:index]
-		exponentText := raw[index+1:]
-		if strings.HasPrefix(exponentText, "+") {
-			exponentText = exponentText[1:]
-		}
+		exponentText := strings.TrimPrefix(raw[index+1:], "+")
 		if exponentText == "" {
 			return decimalNumber{}, fmt.Errorf("invalid JSON number %q", raw)
 		}

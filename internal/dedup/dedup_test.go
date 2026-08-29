@@ -84,8 +84,7 @@ func TestEncode_CacheSafe_CanonicalFirst(t *testing.T) {
 
 func TestEncode_DedupVsFirst_StatsSuffix(t *testing.T) {
 	s := New(20, "")
-	content := "x" + string(make([]byte, 2143)) // ensure length 2144? but we test suffix
-	content = "test content for stats suffix verification 2143 chars placeholder"
+	content := "test content for stats suffix verification 2143 chars placeholder"
 	_ = s.Encode(content, 1) // first
 	ref := s.Encode(content, 2)
 	// ref should contain §ref:XXXXXXXX§ and suffix
@@ -585,9 +584,6 @@ func findCollision(t *testing.T) (string, string) {
 			}
 		} else {
 			seen[h8] = candidate
-		}
-		if i%50000 == 0 {
-			// allow test to continue
 		}
 	}
 	return "", ""

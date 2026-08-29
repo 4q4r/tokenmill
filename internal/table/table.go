@@ -141,10 +141,7 @@ func DetectTable(input string) bool {
 		}
 	}
 	need := int(math.Ceil(0.7 * float64(len(lines))))
-	if consistent >= need {
-		return true
-	}
-	return false
+	return consistent >= need
 }
 
 func parseFixedWidthRow(line string) []string {

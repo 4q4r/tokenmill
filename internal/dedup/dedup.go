@@ -119,14 +119,14 @@ func New(freshnessTurns int, dbPath string) *Store {
 					if rowsErr := rows.Err(); rowsErr != nil {
 						s.lastErr = fmt.Errorf("dedup: iterate entries: %w", rowsErr)
 					}
-					rows.Close()
+					_ = rows.Close()
 				} else {
 					s.lastErr = fmt.Errorf("dedup: load entries: %w", e)
 				}
 				s.db = db
 			} else {
 				s.lastErr = fmt.Errorf("dedup: initialize database: %w", err)
-				db.Close()
+				_ = db.Close()
 			}
 		}
 	}
@@ -189,10 +189,9 @@ func (s *Store) Put(content string, turn int) string {
 	s.entries[full] = ne
 	if _, exists := s.truncIndex[h8]; !exists {
 		s.truncIndex[h8] = full
-	} else {
-		// truncated collision: keep original mapping, do not overwrite truncIndex
-		// Still stored under full key; Get with full will succeed, Get with truncated will return first.
 	}
+	// Truncated collision: keep original mapping, do not overwrite truncIndex.
+	// Still stored under full key; Get with full will succeed, Get with truncated will return first.
 	s.persistEntryLocked(ne)
 	return full
 }
@@ -457,18 +456,6 @@ func (s *Store) NotifyCompaction(keepTurns int) int {
 		}
 	}
 	return len(dels)
-}
-
-// isExpiredLocked checks if entry is expired relative to current maxTurn.
-// Caller must hold at least RLock.
-func (s *Store) isExpiredLocked(e entry, maxTurn int) bool {
-	if s.freshnessTurns <= 0 {
-		return false
-	}
-	if maxTurn < 0 {
-		return false
-	}
-	return maxTurn-e.turn >= s.freshnessTurns
 }
 
 func (s *Store) maxTurnLocked() int {

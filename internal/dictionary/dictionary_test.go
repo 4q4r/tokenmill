@@ -11,7 +11,7 @@ func TestEncodePaths_Basic(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected ok true")
 	}
-	if dict == nil || len(dict) == 0 {
+	if len(dict) == 0 {
 		t.Fatalf("expected dict")
 	}
 	if !strings.Contains(enc, "[Paths:") {

@@ -195,12 +195,8 @@ func TestConcurrency_Count(t *testing.T) {
 			if txt != "" && got == 0 {
 				errCh <- fmt.Sprintf("non-empty got 0 for %q", txt[:min(10, len(txt))])
 			}
-			// also test cache
-			cached := CountWithCache(txt)
-			if cached != Count(txt) && txt != "" {
-				// Allow small difference if fast path vs tiktoken? but should be equal
-				// For our impl they should be equal
-			}
+			// also test cache: exercise the cached path alongside the uncached one
+			_ = CountWithCache(txt)
 			// Savings concurrent
 			_, _ = Savings(txt, "short")
 			_ = EstimateTokens(txt)

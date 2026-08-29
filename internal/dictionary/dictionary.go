@@ -378,81 +378,130 @@ func EncodeSubstrings(input string, minLen int, minCount int, minSavings int) (s
 		m[sub].count++ // raw overlapping count, will recalc non-overlapping later
 		m[sub].positions = append(m[sub].positions, i)
 	}
+	// Extend each repeated window to its maximal repeat: occurrences of a
+	// minLen window that all share the next byte grow one byte at a time.
+	// This collapses the many overlapping minLen-window candidates into a
+	// small set of maximal substrings before any envelope math runs.
 	type cand struct {
-		sub    string
-		count  int // non-overlapping
-		saving int
-		nS     int
+		sub       string
+		positions []int
+		f         int
+		nS        int
 	}
 	var candidates []cand
+	seenMaximal := make(map[string]struct{})
 	for sub, inf := range m {
-		// Compute non-overlapping count
-		positions := inf.positions
-		// positions already sorted ascending
-		nonOver := 0
-		lastEnd := -1
-		for _, p := range positions {
-			if p >= lastEnd {
-				nonOver++
-				lastEnd = p + minLen
-			}
-		}
-		if nonOver < minCount {
+		if _, done := seenMaximal[sub]; done {
 			continue
 		}
-		// Also double-check via strings.Count non-overlapping (should match)
-		// Use strings.Count for final f (non-overlapping)
-		f := strings.Count(input, sub)
+		positions := inf.positions
+		length := minLen
+		for {
+			next := positions[len(positions)-1] + length
+			if next >= n {
+				break
+			}
+			char := input[positions[0]+length]
+			same := true
+			for _, p := range positions {
+				if p+length >= n || input[p+length] != char {
+					same = false
+					break
+				}
+			}
+			if !same {
+				break
+			}
+			length++
+		}
+		maximal := input[positions[0] : positions[0]+length]
+		if _, done := seenMaximal[maximal]; done {
+			continue
+		}
+		seenMaximal[maximal] = struct{}{}
+		// Recompute non-overlapping occurrences of the maximal substring.
+		var occ []int
+		lastEnd := -1
+		for p := 0; p+len(maximal) <= n; {
+			found := strings.Index(input[p:], maximal)
+			if found < 0 {
+				break
+			}
+			at := p + found
+			if at >= lastEnd {
+				occ = append(occ, at)
+				lastEnd = at + len(maximal)
+			}
+			p = at + 1
+		}
+		if len(occ) < minCount {
+			continue
+		}
+		f := strings.Count(input, maximal)
 		if f < minCount {
 			continue
 		}
-		// Use f as count for savings
-		nS := tokenizer.Count(sub)
-		// marker token cost assumed 1
-		saving := f*nS - ((1+f)*1 + nS)
-		if saving <= minSavings {
+		nS := tokenizer.Count(maximal)
+		// Per-candidate gross saving gate (minSavings honored as before).
+		if f*nS-((1+f)*1+nS) <= minSavings {
 			continue
 		}
-		// No nested meta already filtered
-		candidates = append(candidates, cand{sub: sub, count: f, saving: saving, nS: nS})
+		candidates = append(candidates, cand{sub: maximal, positions: occ, f: f, nS: nS})
 	}
 	if len(candidates) == 0 {
 		return input, nil, false
 	}
-	// Sort by saving descending, then length descending, then lexicographically
+	// Greedy selection: highest total gross saving first; a candidate is
+	// accepted only when none of its occurrences overlap an already accepted
+	// one, so the envelope never pays for candidates whose text another
+	// candidate already replaced. Ties break deterministically (length
+	// descending, then lexicographic) so repeated encodes of the same input
+	// produce byte-identical output.
+	maxCodes := 5
 	sort.Slice(candidates, func(i, j int) bool {
-		if candidates[i].saving != candidates[j].saving {
-			return candidates[i].saving > candidates[j].saving
+		left, right := candidates[i].f*candidates[i].nS, candidates[j].f*candidates[j].nS
+		if left != right {
+			return left > right
 		}
 		if len(candidates[i].sub) != len(candidates[j].sub) {
 			return len(candidates[i].sub) > len(candidates[j].sub)
 		}
 		return candidates[i].sub < candidates[j].sub
 	})
-	// Limit? No maxCodes specified for substring; use up to 5? Or unlimited but to avoid explosion we limit to 5 as well.
-	// We'll limit to 5 for consistency, unless minSavings very low we could have many.
-	maxCodes := 5
-	if len(candidates) > maxCodes {
-		candidates = candidates[:maxCodes]
+	type interval struct {
+		start, end int
 	}
-	// Build dict
-	dict := make(map[string]string, len(candidates))
-	for i, c := range candidates {
-		marker := fmt.Sprintf("⟨M%d⟩", i)
-		dict[marker] = c.sub
-	}
-	// Replacement longest-first? Already sorted saving desc, but for overlapping candidates we need longest-first.
-	// Sort candidates by len descending for replacement to avoid partial overlap
-	sort.Slice(candidates, func(i, j int) bool {
-		if len(candidates[i].sub) != len(candidates[j].sub) {
-			return len(candidates[i].sub) > len(candidates[j].sub)
+	var taken []interval
+	dict := make(map[string]string, maxCodes)
+	for _, c := range candidates {
+		if len(dict) == maxCodes {
+			break
 		}
-		return candidates[i].saving > candidates[j].saving
-	})
-	// Rebuild dict mapping after re-sort? Need consistent marker mapping.
-	// Our dict assigned markers based on saving order earlier; now replacement order changed.
-	// Instead create sorted list for replacement that respects dict.
-	// Map sub -> marker
+		disjoint := true
+		for _, p := range c.positions {
+			for _, iv := range taken {
+				if p < iv.end && iv.start < p+len(c.sub) {
+					disjoint = false
+					break
+				}
+			}
+			if !disjoint {
+				break
+			}
+		}
+		if !disjoint {
+			continue
+		}
+		for _, p := range c.positions {
+			taken = append(taken, interval{start: p, end: p + len(c.sub)})
+		}
+		dict[fmt.Sprintf("⟨M%d⟩", len(dict))] = c.sub
+	}
+	if len(dict) == 0 {
+		return input, nil, false
+	}
+	// Replacement longest-first to avoid partial overlaps between accepted
+	// candidates.
 	subToMarker := make(map[string]string)
 	for marker, sub := range dict {
 		subToMarker[sub] = marker
@@ -481,7 +530,7 @@ func EncodeSubstrings(input string, minLen int, minCount int, minSavings int) (s
 	}
 	// Build header
 	var parts []string
-	for i := 0; i < len(candidates); i++ {
+	for i := 0; i < len(dict); i++ {
 		marker := fmt.Sprintf("⟨M%d⟩", i)
 		// Need to find mapping; dict contains it
 		if sub, ok := dict[marker]; ok {

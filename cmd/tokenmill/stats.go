@@ -14,9 +14,9 @@ func newStatsCmd() *cobra.Command {
 		Short: "Alias to gain + TUI hint (like rtk stats --tui)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if tui {
-				fmt.Fprintln(cmd.OutOrStdout(), "TUI mode: polling `tokenmill gain -f json` every 30m. Ensure plugin installed:")
-				fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill init -g --opencode")
-				fmt.Fprintln(cmd.OutOrStdout(), "TUI component: ~/.config/opencode/tui-plugins/tokenmill-stats.tsx (SolidJS, graceful if not installed)")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "TUI mode: polling `tokenmill gain -f json` every 30m. Ensure plugin installed:")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill init -g --opencode")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "TUI component: ~/.config/opencode/tui-plugins/tokenmill-stats.tsx (SolidJS, graceful if not installed)")
 			}
 			// Alias to gain
 			// Create gain command and execute it with same flags that don't conflict
@@ -32,7 +32,7 @@ func newStatsCmd() *cobra.Command {
 				return err
 			}
 			if tui {
-				fmt.Fprintln(cmd.OutOrStdout(), "\nHint: TUI sidebar slot order 40, efficiency meter visible in OpenCode TUI if installed.")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "\nHint: TUI sidebar slot order 40, efficiency meter visible in OpenCode TUI if installed.")
 			}
 			return nil
 		},

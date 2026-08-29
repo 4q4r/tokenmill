@@ -58,11 +58,6 @@ func shortCodec(id string, estimate int) *mockCodec {
 	return &mockCodec{id: id, estimate: estimate, encodeStr: "x", verify: true}
 }
 
-func longCodec(id string, estimate int) *mockCodec {
-	// encode returns long string => negative saving
-	return &mockCodec{id: id, estimate: estimate, encodeStr: strings.Repeat("a ", 1000), verify: true}
-}
-
 func TestTournament_Select_FallbackEmptyPool(t *testing.T) {
 	tr := New(nil)
 	cfg := DefaultConfig()

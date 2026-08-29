@@ -37,8 +37,8 @@ func newGainCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// quota placeholder
 			if quota {
-				fmt.Fprintln(cmd.OutOrStdout(), "Quota: not configured (placeholder — like rtk --quota)")
-				fmt.Fprintln(cmd.OutOrStdout(), "Tier:", tier)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Quota: not configured (placeholder — like rtk --quota)")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Tier:", tier)
 				return nil
 			}
 			// Determine DB path: same as stats default
@@ -46,14 +46,14 @@ func newGainCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("open stats db: %w", err)
 			}
-			defer store.Close()
+			defer func() { _ = store.Close() }()
 
 			// Project filtering: determine project_path for filtering (now persisted via SQLite column project_path)
 			var projectPath string
 			if project {
 				if wd, err := os.Getwd(); err == nil {
 					projectPath = filepath.Clean(wd)
-					fmt.Fprintf(cmd.ErrOrStderr(), "note: --project filter: cwd=%s (filtering by project_path)\n", projectPath)
+					_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "note: --project filter: cwd=%s (filtering by project_path)\n", projectPath)
 				}
 			}
 
@@ -83,7 +83,7 @@ func newGainCmd() *cobra.Command {
 						return fmt.Errorf("get recent: %w", err)
 					}
 					b, _ := json.MarshalIndent(records, "", "  ")
-					fmt.Fprintln(cmd.OutOrStdout(), string(b))
+					_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(b))
 					return nil
 				case "csv":
 					if limit <= 0 {
@@ -99,9 +99,9 @@ func newGainCmd() *cobra.Command {
 						return fmt.Errorf("get recent: %w", err)
 					}
 					w := csv.NewWriter(cmd.OutOrStdout())
-					w.Write([]string{"timestamp", "cmd", "input_tokens", "output_tokens", "saved_tokens", "savings_pct", "duration_ms"})
+					_ = w.Write([]string{"timestamp", "cmd", "input_tokens", "output_tokens", "saved_tokens", "savings_pct", "duration_ms"})
 					for _, r := range records {
-						w.Write([]string{
+						_ = w.Write([]string{
 							r.Timestamp.Format(time.RFC3339),
 							r.Cmd,
 							fmt.Sprintf("%d", r.InputTokens),
@@ -132,7 +132,7 @@ func newGainCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 				return nil
 			}
 			if f == "csv" {
@@ -145,7 +145,7 @@ func newGainCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Fprint(cmd.OutOrStdout(), csvStr)
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), csvStr)
 				return nil
 			}
 			// text mode (project-filtered if requested)
@@ -190,27 +190,9 @@ func newGainCmd() *cobra.Command {
 			}
 
 			// Determine which breakdowns to show based on flags
-			showDaily := true
-			showWeekly := false
-			showMonthly := false
-			if allFlag {
-				showDaily = true
-				showWeekly = true
-				showMonthly = true
-			} else if weekly {
-				showWeekly = true
-				showDaily = false
-			} else if monthly {
-				showMonthly = true
-				showDaily = false
-			} else if daily {
-				showDaily = true
-			} else {
-				// default: only summary + by_command + maybe daily? like rtk default shows summary only
-				// rtk default text shows summary + by_command, not daily breakdown unless -a
-				// We will show summary + by_command always
-				showDaily = false
-			}
+			showDaily := allFlag || daily
+			showWeekly := allFlag || weekly
+			showMonthly := allFlag || monthly
 			if graph {
 				showDaily = true
 			}
@@ -220,13 +202,13 @@ func newGainCmd() *cobra.Command {
 
 			// Header like rtk (show scope) — TokenMill branded but rtk pixel-perfect layout
 			if projectPath != "" {
-				fmt.Fprintln(out, "TokenMill Token Savings (Project Scope)")
-				fmt.Fprintf(out, "Scope: %s\n", projectPath)
+				_, _ = fmt.Fprintln(out, "TokenMill Token Savings (Project Scope)")
+				_, _ = fmt.Fprintf(out, "Scope: %s\n", projectPath)
 			} else {
-				fmt.Fprintln(out, "TokenMill Token Savings (Global Scope)")
+				_, _ = fmt.Fprintln(out, "TokenMill Token Savings (Global Scope)")
 			}
-			fmt.Fprintln(out, strings.Repeat("═", 60))
-			fmt.Fprintln(out, "")
+			_, _ = fmt.Fprintln(out, strings.Repeat("═", 60))
+			_, _ = fmt.Fprintln(out, "")
 			// KPI aligned like rtk print_kpi
 			printKPI(out, "Total commands", fmt.Sprintf("%d", summary.TotalCommands))
 			printKPI(out, "Input tokens", humanTokens(summary.TotalInput))
@@ -235,21 +217,18 @@ func newGainCmd() *cobra.Command {
 			printKPI(out, "Total exec time", fmt.Sprintf("%s (avg %s)", humanDuration(summary.TotalTimeMs), humanDuration(summary.AvgTimeMs)))
 			// efficiency meter 24 chars
 			meter := efficiencyMeter(summary.AvgSavingsPct)
-			fmt.Fprintf(out, "Efficiency meter: %s %.1f%%\n", meter, summary.AvgSavingsPct)
-			fmt.Fprintln(out, "")
+			_, _ = fmt.Fprintf(out, "Efficiency meter: %s %.1f%%\n", meter, summary.AvgSavingsPct)
+			_, _ = fmt.Fprintln(out, "")
 			// Warn about hook (stderr like rtk)
+			// rtk shows "No tracking data yet" for an empty DB, but we keep only the
+			// hook warning (and only when data exists) for compatibility.
 			if summary.TotalCommands > 0 && !hasHookInstalled() {
-				fmt.Fprintln(errOut, "[warn] No hook installed — run `tokenmill init -g` for automatic token savings")
-				fmt.Fprintln(errOut, "")
-			} else if summary.TotalCommands == 0 {
-				// rtk shows No tracking data yet for empty, but we keep showing warning for compatibility?
-				// Still show hook warning if no hook and no data? original tokenmill showed different warn for no data.
-				// For empty DB, also show warn to stderr for test? Our golden test expects warn even with data, so empty case not critical.
-				// Keep minimal: if no commands, don't show hook warn (rtk would show No tracking data yet)
+				_, _ = fmt.Fprintln(errOut, "[warn] No hook installed — run `tokenmill init -g` for automatic token savings")
+				_, _ = fmt.Fprintln(errOut, "")
 			}
 			// By command — rtk style with dynamic widths and impact bar 10 chars
 			if len(summary.ByCommand) > 0 {
-				fmt.Fprintln(out, "By Command")
+				_, _ = fmt.Fprintln(out, "By Command")
 				// compute dynamic widths like rtk
 				cmdWidth := 24
 				impactWidth := 10
@@ -288,9 +267,9 @@ func newGainCmd() *cobra.Command {
 					timeWidth = 6
 				}
 				tableWidth := 3 + 2 + cmdWidth + 2 + countWidth + 2 + savedWidth + 2 + 6 + 2 + timeWidth + 2 + impactWidth
-				fmt.Fprintln(out, strings.Repeat("─", tableWidth))
-				fmt.Fprintf(out, "%3s %-*s %*s %*s %6s %*s %-*s\n", "#", cmdWidth, "Command", countWidth, "Count", savedWidth, "Saved", "Avg%", timeWidth, "Time", impactWidth, "Impact")
-				fmt.Fprintln(out, strings.Repeat("─", tableWidth))
+				_, _ = fmt.Fprintln(out, strings.Repeat("─", tableWidth))
+				_, _ = fmt.Fprintf(out, "%3s %-*s %*s %*s %6s %*s %-*s\n", "#", cmdWidth, "Command", countWidth, "Count", savedWidth, "Saved", "Avg%", timeWidth, "Time", impactWidth, "Impact")
+				_, _ = fmt.Fprintln(out, strings.Repeat("─", tableWidth))
 				// max saved for bar
 				maxSaved := 0
 				for _, bc := range summary.ByCommand {
@@ -318,13 +297,13 @@ func newGainCmd() *cobra.Command {
 					timeCell := fmt.Sprintf("%*s", timeWidth, humanDuration(toInt64(bc[4])))
 					impact := miniBar(savedVal, maxSaved, impactWidth)
 					rowIdx := fmt.Sprintf("%2d.", i+1)
-					fmt.Fprintf(out, "%s %s %s %s %s %s %s\n", rowIdx, cmdCell, countCell, savedCell, pctCell, timeCell, impact)
+					_, _ = fmt.Fprintf(out, "%s %s %s %s %s %s %s\n", rowIdx, cmdCell, countCell, savedCell, pctCell, timeCell, impact)
 				}
-				fmt.Fprintln(out, strings.Repeat("─", tableWidth))
-				fmt.Fprintln(out, "")
+				_, _ = fmt.Fprintln(out, strings.Repeat("─", tableWidth))
+				_, _ = fmt.Fprintln(out, "")
 			} else {
-				fmt.Fprintln(out, "No commands yet.")
-				fmt.Fprintln(out, "")
+				_, _ = fmt.Fprintln(out, "No commands yet.")
+				_, _ = fmt.Fprintln(out, "")
 			}
 
 			// Recent Commands — only if --history text
@@ -337,8 +316,8 @@ func newGainCmd() *cobra.Command {
 					records, _ = store.GetRecent(limit)
 				}
 				if len(records) > 0 {
-					fmt.Fprintln(out, "Recent Commands")
-					fmt.Fprintln(out, "──────────────────────────────────────────────────────────")
+					_, _ = fmt.Fprintln(out, "Recent Commands")
+					_, _ = fmt.Fprintln(out, "──────────────────────────────────────────────────────────")
 					for _, r := range records {
 						timeStr := r.Timestamp.Format("01-02 15:04")
 						cmdShort := r.Cmd
@@ -360,47 +339,47 @@ func newGainCmd() *cobra.Command {
 							pctStr = fmt.Sprintf("-%.0f%%", r.SavingsPct)
 						}
 						tokensStr := humanTokens(r.SavedTokens)
-						fmt.Fprintf(out, "%s %s %s %s (%s)\n", timeStr, sign, cmdPadded, pctStr, tokensStr)
+						_, _ = fmt.Fprintf(out, "%s %s %s %s (%s)\n", timeStr, sign, cmdPadded, pctStr, tokensStr)
 					}
-					fmt.Fprintln(out, "")
+					_, _ = fmt.Fprintln(out, "")
 				}
 			}
 
 			// Daily breakdown
 			if showDaily {
 				if len(dailyData) > 0 {
-					fmt.Fprintln(out, "Daily breakdown")
-					fmt.Fprintln(out, strings.Repeat("─", 80))
-					fmt.Fprintf(out, "%-12s %6s %8s %8s %8s %6s %8s\n", "date", "cmds", "input", "output", "saved", "pct", "time")
-					fmt.Fprintln(out, strings.Repeat("─", 80))
+					_, _ = fmt.Fprintln(out, "Daily breakdown")
+					_, _ = fmt.Fprintln(out, strings.Repeat("─", 80))
+					_, _ = fmt.Fprintf(out, "%-12s %6s %8s %8s %8s %6s %8s\n", "date", "cmds", "input", "output", "saved", "pct", "time")
+					_, _ = fmt.Fprintln(out, strings.Repeat("─", 80))
 					for _, d := range dailyData {
-						fmt.Fprintf(out, "%-12s %6d %8d %8d %8d %5.1f%% %8s\n", d.Date, d.Commands, d.InputTokens, d.OutputTokens, d.SavedTokens, d.SavingsPct, humanDuration(d.TotalTimeMs))
+						_, _ = fmt.Fprintf(out, "%-12s %6d %8d %8d %8d %5.1f%% %8s\n", d.Date, d.Commands, d.InputTokens, d.OutputTokens, d.SavedTokens, d.SavingsPct, humanDuration(d.TotalTimeMs))
 					}
-					fmt.Fprintln(out, "")
+					_, _ = fmt.Fprintln(out, "")
 				}
 			}
 			if showWeekly {
 				if len(weeklyData) > 0 {
-					fmt.Fprintln(out, "Weekly breakdown")
-					fmt.Fprintln(out, strings.Repeat("─", 80))
+					_, _ = fmt.Fprintln(out, "Weekly breakdown")
+					_, _ = fmt.Fprintln(out, strings.Repeat("─", 80))
 					for _, w := range weeklyData {
-						fmt.Fprintf(out, "%s to %s: %d cmds, saved %d (%.1f%%)\n", w.WeekStart, w.WeekEnd, w.Commands, w.SavedTokens, w.SavingsPct)
+						_, _ = fmt.Fprintf(out, "%s to %s: %d cmds, saved %d (%.1f%%)\n", w.WeekStart, w.WeekEnd, w.Commands, w.SavedTokens, w.SavingsPct)
 					}
-					fmt.Fprintln(out, "")
+					_, _ = fmt.Fprintln(out, "")
 				}
 			}
 			if showMonthly {
 				if len(monthlyData) > 0 {
-					fmt.Fprintln(out, "Monthly breakdown")
-					fmt.Fprintln(out, strings.Repeat("─", 80))
+					_, _ = fmt.Fprintln(out, "Monthly breakdown")
+					_, _ = fmt.Fprintln(out, strings.Repeat("─", 80))
 					for _, m := range monthlyData {
-						fmt.Fprintf(out, "%s: %d cmds, saved %d (%.1f%%)\n", m.Month, m.Commands, m.SavedTokens, m.SavingsPct)
+						_, _ = fmt.Fprintf(out, "%s: %d cmds, saved %d (%.1f%%)\n", m.Month, m.Commands, m.SavedTokens, m.SavingsPct)
 					}
-					fmt.Fprintln(out, "")
+					_, _ = fmt.Fprintln(out, "")
 				}
 			}
 			if graph && len(dailyData) > 0 {
-				fmt.Fprintln(out, "Graph (daily saved tokens):")
+				_, _ = fmt.Fprintln(out, "Graph (daily saved tokens):")
 				maxSaved := 0
 				for _, d := range dailyData {
 					if d.SavedTokens > maxSaved {
@@ -416,7 +395,7 @@ func newGainCmd() *cobra.Command {
 						barLen = 1
 					}
 					bar := strings.Repeat("█", barLen)
-					fmt.Fprintf(out, "%s %s %d\n", d.Date, bar, d.SavedTokens)
+					_, _ = fmt.Fprintf(out, "%s %s %d\n", d.Date, bar, d.SavedTokens)
 				}
 			}
 			return nil
@@ -494,7 +473,7 @@ func efficiencyMeter(pct float64) string {
 
 func printKPI(w interface{ Write([]byte) (int, error) }, label, value string) {
 	// mimic rtk print_kpi: println!("{:<18} {}", format!("{label}:"), value)
-	fmt.Fprintf(w, "%-18s %s\n", label+":", value)
+	_, _ = fmt.Fprintf(w, "%-18s %s\n", label+":", value)
 }
 
 func truncateForColumn(text string, width int) string {

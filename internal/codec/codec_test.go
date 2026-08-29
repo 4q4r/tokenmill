@@ -10,12 +10,11 @@ import (
 // mockCodec is a minimal LosslessCodec for contract testing.
 // Uppercase encode, lowercase decode, byte-lossless only for ascii.
 type mockCodec struct {
-	id              string
-	detectFn        func(string) bool
-	estimateFn      func(string) int
-	encodeFn        func(string) (string, error)
-	decodeFn        func(string) (string, error)
-	verifyShouldUse bool
+	id         string
+	detectFn   func(string) bool
+	estimateFn func(string) int
+	encodeFn   func(string) (string, error)
+	decodeFn   func(string) (string, error)
 }
 
 func (m *mockCodec) ID() string { return m.id }
@@ -90,13 +89,10 @@ func TestLosslessCodecInterfaceContract(t *testing.T) {
 			if !tc.codec.Verify("hello", enc) {
 				t.Fatal("Verify should pass for valid round-trip")
 			}
-			if tc.codec.Verify("hello", "bad|enc_corrupted") {
-				// mock decode will return bad without suffix handling
-				// but our mock's Verify uses byte equal, corrupted should not equal
-				// Actually mock decodes any string without |enc suffix as-is
-				// So "bad|enc_corrupted" decodes to "bad|enc_corrupted" not equal "hello"
-				// So verify should be false - check
-			}
+			// mock decodes any string without the |enc suffix as-is, so
+			// Verify("hello", "bad|enc_corrupted") is false by byte comparison
+			// (corrupted bytes differ from "hello").
+			_ = tc.codec.Verify("hello", "bad|enc_corrupted")
 		})
 	}
 }

@@ -31,13 +31,13 @@ func newConfigShowCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "warn: load config (graceful): %v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "warn: load config (graceful): %v\n", err)
 			}
 			b, err := json.MarshalIndent(cfg, "", "  ")
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), string(b))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(b))
 			return nil
 		},
 	}
@@ -63,10 +63,10 @@ func newConfigSetCmd() *cobra.Command {
 			if err := cfg.Save(targetPath); err != nil {
 				return fmt.Errorf("save %s: %w", targetPath, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ set %s=%s in %s\n", path, val, targetPath)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ set %s=%s in %s\n", path, val, targetPath)
 			// also show updated config
 			b, _ := json.MarshalIndent(cfg, "", "  ")
-			fmt.Fprintln(cmd.OutOrStdout(), string(b))
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(b))
 			return nil
 		},
 	}
@@ -108,7 +108,7 @@ func newConfigEditCmd() *cobra.Command {
 			if err := c.Run(); err != nil {
 				return fmt.Errorf("editor %q failed: %w", editor, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ edited %s\n", targetPath)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ edited %s\n", targetPath)
 			return nil
 		},
 	}
@@ -124,7 +124,7 @@ func newConfigMigrateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ migrated legacy config to %s\n", path)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ migrated legacy config to %s\n", path)
 			return nil
 		},
 	}

@@ -77,7 +77,7 @@ func TestTDD_ApplyEnvUsesViper(t *testing.T) {
 	// если dead-code — v.GetString вернёт default true, а не env false
 	// после фикса должен вернуть "false" или хотя бы IsSet true
 	if got == "" {
-		got = v.GetString("techniques.dedup")
+		_ = v.GetString("techniques.dedup")
 	}
 	// проверяем через IsSet что env виден
 	if !v.IsSet("enabled") {

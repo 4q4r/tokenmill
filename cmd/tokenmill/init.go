@@ -129,20 +129,20 @@ func newInitCmd() *cobra.Command {
 				opencodeJSON = filepath.Join(home, ".config", "opencode", "opencode.json")
 				tuiJSON = filepath.Join(home, ".config", "opencode", "tui.json")
 				// Log hint that --opencode is recommended
-				fmt.Fprintln(os.Stderr, "hint: use --opencode for OpenCode plugin (defaulting to global)")
+				_, _ = fmt.Fprintln(os.Stderr, "hint: use --opencode for OpenCode plugin (defaulting to global)")
 			}
 
 			// 1) Create plugin file atomically temp+rename, idempotent
 			if err := writeAtomic(pluginPath, pluginTemplate, 0644); err != nil {
 				return fmt.Errorf("write plugin: %w", err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ plugin %s\n", pluginPath)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ plugin %s\n", pluginPath)
 
 			// 2) Patch opencode.json plugins entry
 			if err := patchOpencodeJSON(opencodeJSON); err != nil {
 				return fmt.Errorf("patch %s: %w", opencodeJSON, err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "✓ patched %s plugin entry [\"opencode-tokenmill\"]\n", opencodeJSON)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ patched %s plugin entry [\"opencode-tokenmill\"]\n", opencodeJSON)
 
 			// 3) Optionally TUI plugin if not --hook-only and graceful
 			if !hookOnly {
@@ -150,34 +150,34 @@ func newInitCmd() *cobra.Command {
 				if err := os.MkdirAll(filepath.Dir(tuiPluginPath), 0755); err == nil {
 					if _, err := os.Stat(tuiPluginPath); os.IsNotExist(err) {
 						if err := writeAtomic(tuiPluginPath, tuiTemplate, 0644); err != nil {
-							fmt.Fprintf(os.Stderr, "warn: tui plugin write failed (graceful): %v\n", err)
+							_, _ = fmt.Fprintf(os.Stderr, "warn: tui plugin write failed (graceful): %v\n", err)
 						} else {
-							fmt.Fprintf(cmd.OutOrStdout(), "✓ tui plugin %s\n", tuiPluginPath)
+							_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ tui plugin %s\n", tuiPluginPath)
 						}
 					} else {
-						fmt.Fprintf(cmd.OutOrStdout(), "· tui plugin exists %s (idempotent)\n", tuiPluginPath)
+						_, _ = fmt.Fprintf(cmd.OutOrStdout(), "· tui plugin exists %s (idempotent)\n", tuiPluginPath)
 					}
 				}
 				if err := patchTuiJSON(tuiJSON); err != nil {
 					return fmt.Errorf("patch %s: %w", tuiJSON, err)
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "✓ patched %s\n", tuiJSON)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "✓ patched %s\n", tuiJSON)
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "· --hook-only: skipped tui plugin")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "· --hook-only: skipped tui plugin")
 			}
 
 			// Instructions like rtk
-			fmt.Fprintln(cmd.OutOrStdout(), "")
-			fmt.Fprintln(cmd.OutOrStdout(), "Next steps:")
-			fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill --version")
-			fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill gain")
-			fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill rewrite \"git status\"  # test tournament")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Next steps:")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill --version")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill gain")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "  tokenmill rewrite \"git status\"  # test tournament")
 			if isGlobal {
-				fmt.Fprintln(cmd.OutOrStdout(), "Global plugin installed at ~/.config/opencode/plugins/tokenmill.ts")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Global plugin installed at ~/.config/opencode/plugins/tokenmill.ts")
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "Local plugin installed at .opencode/plugins/tokenmill.ts")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Local plugin installed at .opencode/plugins/tokenmill.ts")
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Restart opencode to load the plugin.")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Restart opencode to load the plugin.")
 			return nil
 		},
 	}
@@ -217,9 +217,9 @@ func writeAtomic(path, content string, perm os.FileMode) error {
 	}
 	tmpName := tmp.Name()
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		if _, err := os.Stat(tmpName); err == nil {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 		}
 	}()
 	if _, err := tmp.WriteString(content); err != nil {

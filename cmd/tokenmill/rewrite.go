@@ -204,6 +204,49 @@ func (p *pathDictWrapper) Verify(a, b string) bool {
 	return dictionary.VerifyPaths(a, b, dict)
 }
 
+type substringDictWrapper struct{ minLen, minCount int }
+
+func (s *substringDictWrapper) ID() string { return "substring-dict" }
+func (s *substringDictWrapper) Detect(inp string) bool {
+	return len(inp) >= s.minLen
+}
+func (s *substringDictWrapper) EstimateSavings(inp string) int {
+	if !s.Detect(inp) {
+		return -1
+	}
+	enc, _, ok := dictionary.EncodeSubstrings(inp, s.minLen, s.minCount, 0)
+	if !ok {
+		return -1
+	}
+	saving := tokenizer.Count(inp) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (s *substringDictWrapper) Encode(inp string) (string, error) {
+	enc, _, ok := dictionary.EncodeSubstrings(inp, s.minLen, s.minCount, 0)
+	if !ok {
+		return inp, fmt.Errorf("no substring dict saving")
+	}
+	return enc, nil
+}
+func (s *substringDictWrapper) Decode(enc string) (string, error) {
+	// The dictionary is recomputed deterministically by Verify; standalone
+	// decoding of an encoded payload requires the embedded dictionary header.
+	return enc, fmt.Errorf("substring dict decode requires dict")
+}
+func (s *substringDictWrapper) Verify(a, b string) bool {
+	enc, dict, ok := dictionary.EncodeSubstrings(a, s.minLen, s.minCount, 0)
+	if !ok {
+		return false
+	}
+	if enc != b {
+		return false
+	}
+	return dictionary.VerifySubstrings(a, b, dict)
+}
+
 type tableWrapper struct{}
 
 func (t *tableWrapper) ID() string           { return "table-tsv" }
@@ -301,6 +344,17 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.PathDict.Enabled {
 		pool = append(pool, &pathDictWrapper{maxCodes: cfg.Techniques.PathDict.MaxCodes, minCount: cfg.Techniques.PathDict.MinCount})
 	}
+	if cfg.Techniques.SubstringDict.Enabled {
+		minLen := cfg.Techniques.SubstringDict.MinLen
+		minCount := cfg.Techniques.SubstringDict.MinCount
+		if minLen <= 0 {
+			minLen = 40
+		}
+		if minCount <= 0 {
+			minCount = 4
+		}
+		pool = append(pool, &substringDictWrapper{minLen: minLen, minCount: minCount})
+	}
 	if cfg.Techniques.JsonCompact {
 		pool = append(pool, &jsonCompactWrapper{c: jsoncompact.New()})
 	}
@@ -392,13 +446,13 @@ func recordRewriteStats(cmd *cobra.Command, cfg config.Config, input, output str
 	}
 	store, err := stats.New("")
 	if err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "warn: record rewrite stats: open store: %v\n", err)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warn: record rewrite stats: open store: %v\n", err)
 		return
 	}
 	if err := store.Record(input, input, output, tokenizer.Count(input), tokenizer.Count(output), time.Since(started).Milliseconds()); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "warn: record rewrite stats: %v\n", err)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warn: record rewrite stats: %v\n", err)
 	}
 	if err := store.Close(); err != nil {
-		fmt.Fprintf(cmd.ErrOrStderr(), "warn: close rewrite stats: %v\n", err)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "warn: close rewrite stats: %v\n", err)
 	}
 }

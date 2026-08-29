@@ -151,7 +151,7 @@ func New(dbPath string) (*Store, error) {
 		if err != nil {
 			return nil, fmt.Errorf("create db file: %w", err)
 		}
-		f.Close()
+		_ = f.Close()
 	}
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -177,7 +177,7 @@ func New(dbPath string) (*Store, error) {
 		);
 	`)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("create table: %w", err)
 	}
 	// Migration: add project_path column if missing (for existing DBs created before column existed)
@@ -299,7 +299,7 @@ func (s *Store) GetSummaryForProject(project string) (*GainSummary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query by command: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var cmd string
 		var cnt, saved int
@@ -325,7 +325,7 @@ func (s *Store) GetSummaryForProject(project string) (*GainSummary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query by day: %w", err)
 	}
-	defer rows2.Close()
+	defer func() { _ = rows2.Close() }()
 	var tmp [][]interface{}
 	for rows2.Next() {
 		var date string
@@ -396,7 +396,7 @@ func (s *Store) GetAllDaysForProject(project string) ([]DayStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query daily stats: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []DayStats
 	for rows.Next() {
 		var date string
@@ -478,7 +478,7 @@ func (s *Store) GetByWeekForProject(project string) ([]WeekStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query weekly stats: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []WeekStats
 	for rows.Next() {
 		var weekStart, weekEnd string
@@ -558,7 +558,7 @@ func (s *Store) GetByMonthForProject(project string) ([]MonthStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query monthly stats: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []MonthStats
 	for rows.Next() {
 		var month string
@@ -620,7 +620,7 @@ func (s *Store) GetRecentForProject(limit int, project string) ([]CommandRecord,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []CommandRecord
 	for rows.Next() {
 		var tsStr, cmd string

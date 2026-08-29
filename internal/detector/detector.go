@@ -387,7 +387,6 @@ func IsHomogeneousJSONArray(s string) (bool, float64) {
 		return false, 0
 	}
 	// Need to check each element is an object and keys are uniform
-	type keySet = map[string]struct{}
 	var firstKeys []string
 	firstObj := make(map[string]interface{})
 	if err := json.Unmarshal(arr[0], &firstObj); err != nil {

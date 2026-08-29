@@ -1,0 +1,14 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  exclusions:
+    rules:
+      # Test code routinely ignores returned errors from helpers and cleanup
+      # calls; asserting every one adds noise without catching real defects.
+      - path: _test\.go
+        linters:
+          - errcheck

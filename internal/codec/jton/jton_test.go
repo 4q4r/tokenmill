@@ -265,11 +265,8 @@ func TestJTON_DecodeInvalid(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid decode")
 	}
-	_, err2 := c.Decode("[1: a, b; 1, 2]")
-	if err2 == nil {
-		// This is actually valid? 1 row? But header says 1, we provide 1 row with 2 cols? That's valid
-		// Let's test mismatch
-	}
+	// result intentionally unchecked: 1-col header vs 2-col body handled by mismatch cases below
+	_, _ = c.Decode("[1: a, b; 1, 2]")
 	_, err3 := c.Decode("[2: a, b; 1, 2]")
 	if err3 == nil {
 		t.Fatal("expected error for row count mismatch")

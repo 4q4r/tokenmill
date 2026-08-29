@@ -3,8 +3,8 @@
   "logSavings": true,
   "logLevel": "info",
   "showUpdateEvery": 10,
-  "minSavingsPercent": 10,
-  "minSavingsTokens": 32,
+  "minSavingsPercent": 0,
+  "minSavingsTokens": 0,
   "freshnessTurns": 20,
   "tracking": {},
   "techniques": {

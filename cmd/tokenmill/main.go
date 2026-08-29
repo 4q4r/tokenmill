@@ -1,11 +1,7 @@
 package main
 
-import "os"
-
 func main() {
-	// Allow `tokenmill --version` to work via root Version.
-	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-V") {
-		// cobra handles version; we just ensure Execute sets version template.
-	}
+	// `tokenmill --version` works via the root command's Version:
+	// cobra handles it; Execute just needs to run with the version template set.
 	Execute()
 }

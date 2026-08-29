@@ -241,7 +241,33 @@ func TestStripJSONC_ExportedPreservesURL(t *testing.T) {
 
 // ---------- fail-open ----------
 
+// isolateConfigEnv points the global and project config layers at empty
+// temporary directories so tests observe defaults regardless of the
+// developer machine's own tokenmill configuration.
+func isolateConfigEnv(t *testing.T) {
+	t.Helper()
+	configHome := t.TempDir()
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	if err := os.Chdir(project); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldWd); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
+	})
+}
+
 func TestFailOpenInvalidJSON(t *testing.T) {
+	isolateConfigEnv(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad.jsonc")
 	os.WriteFile(path, []byte(`{ invalid json,,,`), 0644)
@@ -260,6 +286,7 @@ func TestFailOpenInvalidJSON(t *testing.T) {
 }
 
 func TestLoadFromNotExistReturnsDefaults(t *testing.T) {
+	isolateConfigEnv(t)
 	cfg, err := LoadFrom(filepath.Join(t.TempDir(), "does-not-exist.jsonc"))
 	if err == nil {
 		t.Log("LoadFrom missing file should return error for logging (but fail-open config)")

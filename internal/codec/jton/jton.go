@@ -256,10 +256,7 @@ func encodeZen(objects []map[string]json.RawMessage, cols []string) (string, err
 		sb.WriteString(";")
 	}
 	// Remove last ";"? Spec example includes trailing? Example "[2: id, name; 1, \"Alice\"; 2, \"Bob\"]" has no trailing ; inside before ]. But our builder adds trailing ; for each row. Remove last char if it's ";"
-	str := sb.String()
-	if strings.HasSuffix(str, ";") {
-		str = str[:len(str)-1]
-	}
+	str := strings.TrimSuffix(sb.String(), ";")
 	str += "]"
 	return str, nil
 }

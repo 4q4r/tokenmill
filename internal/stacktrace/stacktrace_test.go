@@ -15,7 +15,7 @@ func TestCompressStackTrace_Go(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected ok")
 	}
-	if dict == nil || len(dict) == 0 {
+	if len(dict) == 0 {
 		t.Fatalf("dict empty")
 	}
 	if !strings.Contains(enc, "$F0") {

@@ -283,7 +283,7 @@ func safeVerify(c codec.LosslessCodec, original, encoded string) (ok bool) {
 }
 
 func safeID(c codec.LosslessCodec) string {
-	defer func() { recover() }()
+	defer func() { _ = recover() }()
 	if c == nil {
 		return "<nil>"
 	}

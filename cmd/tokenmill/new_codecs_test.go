@@ -1,10 +1,83 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/tokenmill/tokenmill/internal/codec"
 	"github.com/tokenmill/tokenmill/internal/config"
 )
+
+func TestBuildPoolRegistersSubstringDictWhenEnabled(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Techniques.SubstringDict = config.SubstringDict{Enabled: true, MinLen: 12, MinCount: 3}
+	pool := buildPool(cfg)
+	var target codec.LosslessCodec
+	found := false
+	for _, candidate := range pool {
+		if candidate.ID() == "substring-dict" {
+			target = candidate
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("buildPool did not register substring-dict: %v", poolIDs(pool))
+	}
+
+	input := strings.Repeat("GET /api/v2/warehouse/stocks?limit=100 HTTP/1.1\n", 20)
+	if !target.Detect(input) {
+		t.Fatal("substring-dict Detect rejected repetitive input")
+	}
+	encoded, err := target.Encode(input)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	encodedAgain, err := target.Encode(input)
+	if err != nil {
+		t.Fatalf("second Encode: %v", err)
+	}
+	if encodedAgain != encoded {
+		t.Fatal("substring-dict Encode is not deterministic for identical input")
+	}
+	if !target.Verify(input, encoded) {
+		t.Fatal("substring-dict Verify failed for its own encoding")
+	}
+	if target.EstimateSavings(input) <= 0 {
+		t.Fatal("substring-dict EstimateSavings was not positive for repetitive input")
+	}
+}
+
+func TestSubstringDictLeavesShortInputUntouched(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Techniques.SubstringDict = config.SubstringDict{Enabled: true, MinLen: 40, MinCount: 4}
+	pool := buildPool(cfg)
+	var target codec.LosslessCodec
+	for _, candidate := range pool {
+		if candidate.ID() == "substring-dict" {
+			target = candidate
+			break
+		}
+	}
+	if target == nil {
+		t.Fatal("substring-dict not registered")
+	}
+	short := "just a short line"
+	if target.Detect(short) {
+		t.Fatal("Detect accepted input shorter than minLen")
+	}
+	if _, err := target.Encode(short); err == nil {
+		t.Fatal("Encode succeeded on input shorter than minLen")
+	}
+}
+
+func poolIDs(pool []codec.LosslessCodec) []string {
+	ids := make([]string, 0, len(pool))
+	for _, candidate := range pool {
+		ids = append(ids, candidate.ID())
+	}
+	return ids
+}
 
 func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 	cfg := config.DefaultConfig()

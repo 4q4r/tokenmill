@@ -615,7 +615,7 @@ func loadFileInto(cfg *Config, path string, optional bool) error {
 	stripped := stripJSONC(string(data))
 	// Unmarshal onto cfg preserving defaults for missing fields: decode into same struct
 	// Use json.RawMessage approach to avoid zeroing missing nested fields? json.Unmarshal onto existing struct preserves missing.
-	var tmp Config = *cfg
+	var tmp = *cfg
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(stripped), &raw); err == nil {
 		clearDatabasePathAlias(&tmp, raw)
@@ -991,10 +991,10 @@ func (c *Config) Save(path string) error {
 	tmpName := tmp.Name()
 	// ensure cleanup on failure
 	defer func() {
-		tmp.Close()
+		_ = tmp.Close()
 		// if still exists (not renamed), remove
 		if _, err := os.Stat(tmpName); err == nil {
-			os.Remove(tmpName)
+			_ = os.Remove(tmpName)
 		}
 	}()
 	if _, err := tmp.Write(data); err != nil {
@@ -1072,7 +1072,7 @@ func (c *Config) Set(path string, value interface{}) error {
 			continue
 		}
 		// For pointer handling (not used currently)
-		if field.Kind() == reflect.Ptr {
+		if field.Kind() == reflect.Pointer {
 			if field.IsNil() {
 				field.Set(reflect.New(field.Type().Elem()))
 			}
