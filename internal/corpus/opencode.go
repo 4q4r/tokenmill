@@ -1,4 +1,4 @@
-//go:build linux && (amd64 || arm64)
+//go:build linux
 
 package corpus
 
@@ -199,32 +199,13 @@ func (s *OpenCodeSource) Read(ctx context.Context, artifact Artifact, writer *Wr
 	if err != nil {
 		return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, err)
 	}
-	records, skippedMessages, err := loadOpenCodeRecords(ctx, tx, schema, artifact)
-	if err != nil {
+	if err := s.streamOpenCodeRecords(ctx, tx, schema, artifact, writer); err != nil {
 		return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, err)
 	}
 	if err := tx.Commit(); err != nil {
 		return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, corpusError(CodeInputJSON, "commit OpenCode read transaction", err))
 	}
 	committed = true
-	for index, record := range records {
-		line := sourceLine{Line: index + 1, Offset: int64(index)}
-		if err := writeImportedRecord(writer, line, record); err != nil {
-			return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, err)
-		}
-	}
-	for index, skipped := range skippedMessages {
-		quarantine := Quarantine{
-			Line:    len(records) + index + 1,
-			Offset:  int64(len(records) + index),
-			Code:    CodeInputJSON,
-			Message: fmt.Sprintf("OpenCode session %s message %s has no parts", skipped.sessionID, skipped.messageID),
-			Raw:     skipped.raw,
-		}
-		if err := writer.Tolerate(quarantine); err != nil {
-			return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, err)
-		}
-	}
 	return s.finishOpenCodeRead(writer, file, before, storeSnapshot.companions, nil)
 }
 
@@ -438,44 +419,45 @@ type openCodePartRow struct {
 	ordinal   int
 }
 
-func loadOpenCodeRecords(ctx context.Context, tx *sql.Tx, schema openCodeSchema, artifact Artifact) ([]replay.Record, []openCodeSkippedMessage, error) {
-	skippedMessages := []openCodeSkippedMessage{}
+// streamOpenCodeRecords imports one session at a time: messages, parts, and
+// records for a session are loaded, written, and released before the next
+// session starts, so peak memory stays bounded by the largest session rather
+// than the whole store. Global identity sets keep duplicate-ID detection
+// store-wide, and every entry (record or tolerated skip) consumes one
+// deterministic journal line.
+func (s *OpenCodeSource) streamOpenCodeRecords(ctx context.Context, tx *sql.Tx, schema openCodeSchema, artifact Artifact, writer *Writer) error {
 	sessions, err := loadOpenCodeSessions(ctx, tx, schema.session)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	messages, err := loadOpenCodeMessages(ctx, tx, schema.message, sessions)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err := loadOpenCodeParts(ctx, tx, schema.part, sessions, messages); err != nil {
-		return nil, nil, err
-	}
-	bySession := make(map[string][]*openCodeMessageRow)
-	for _, message := range messages {
-		bySession[message.sessionID] = append(bySession[message.sessionID], message)
-	}
-	for sessionID := range bySession {
-		sort.SliceStable(bySession[sessionID], func(i, j int) bool {
-			left, right := openCodeMessageTime(bySession[sessionID][i]), openCodeMessageTime(bySession[sessionID][j])
+	seenMessageIDs := make(map[string]struct{})
+	seenPartIDs := make(map[string]struct{})
+	line := 0
+	for _, session := range sessions {
+		messages, err := loadOpenCodeSessionMessages(ctx, tx, schema.message, session, seenMessageIDs)
+		if err != nil {
+			return err
+		}
+		if err := loadOpenCodeSessionParts(ctx, tx, schema.part, session, messages, seenPartIDs); err != nil {
+			return err
+		}
+		sort.SliceStable(messages, func(i, j int) bool {
+			left, right := openCodeMessageTime(messages[i]), openCodeMessageTime(messages[j])
 			if left.IsZero() != right.IsZero() {
 				return !left.IsZero()
 			}
 			if !left.Equal(right) {
 				return left.Before(right)
 			}
-			if bySession[sessionID][i].id != bySession[sessionID][j].id {
-				return bySession[sessionID][i].id < bySession[sessionID][j].id
+			if messages[i].id != messages[j].id {
+				return messages[i].id < messages[j].id
 			}
-			return bySession[sessionID][i].ordinal < bySession[sessionID][j].ordinal
+			return messages[i].ordinal < messages[j].ordinal
 		})
-	}
-	var records []replay.Record
-	for _, session := range sessions {
-		for sequence, messageRow := range bySession[session.id] {
+		for sequence, messageRow := range messages {
 			message, model, timestamp, err := openCodeMessage(messageRow)
 			if err != nil {
-				return nil, nil, err
+				return err
 			}
 			if model == "" {
 				model = session.model
@@ -490,41 +472,43 @@ func loadOpenCodeRecords(ctx context.Context, tx *sql.Tx, schema openCodeSchema,
 			for _, partRow := range parts {
 				part, callID, err := openCodePart(partRow)
 				if err != nil {
-					return nil, nil, err
+					return err
 				}
 				message.Parts = append(message.Parts, part)
 				if message.ToolCallID == "" && callID != "" {
 					message.ToolCallID = callID
 				}
 			}
+			line++
 			if len(message.Parts) == 0 {
 				raw, rawErr := json.Marshal(messageRow.data)
 				if rawErr != nil {
-					return nil, nil, corpusError(CodeInputJSON, "encode OpenCode zero-part message for quarantine", rawErr)
+					return corpusError(CodeInputJSON, "encode OpenCode zero-part message for quarantine", rawErr)
 				}
-				skippedMessages = append(skippedMessages, openCodeSkippedMessage{
-					sessionID: session.id,
-					messageID: messageRow.id,
-					raw:       raw,
-				})
+				quarantine := Quarantine{
+					Line:    line,
+					Offset:  int64(line - 1),
+					Code:    CodeInputJSON,
+					Message: fmt.Sprintf("OpenCode session %s message %s has no parts", session.id, messageRow.id),
+					Raw:     raw,
+				}
+				if err := writer.Tolerate(quarantine); err != nil {
+					return err
+				}
 				continue
 			}
 			record := newImportedRecord("opencode", artifact, session.id, messageRow.id, sequence, timestamp, model, message)
 			record.Source.Version = session.version
 			record.Source.RelativeLocator = artifact.RelativePath + "#message/" + messageRow.id
-			records = append(records, record)
+			if err := writeImportedRecord(writer, sourceLine{Line: line, Offset: int64(line - 1)}, record); err != nil {
+				return err
+			}
+		}
+		for index := range messages {
+			messages[index] = nil
 		}
 	}
-	return records, skippedMessages, nil
-}
-
-// openCodeSkippedMessage journals one message row that carries no part rows.
-// The raw message data is retained in the quarantine journal so the skip is
-// observable instead of silent.
-type openCodeSkippedMessage struct {
-	sessionID string
-	messageID string
-	raw       []byte
+	return nil
 }
 
 func loadOpenCodeSessions(ctx context.Context, tx *sql.Tx, columns []string) ([]openCodeSessionRow, error) {
@@ -553,16 +537,11 @@ func loadOpenCodeSessions(ctx context.Context, tx *sql.Tx, columns []string) ([]
 	return sessions, nil
 }
 
-func loadOpenCodeMessages(ctx context.Context, tx *sql.Tx, columns []string, sessions []openCodeSessionRow) ([]*openCodeMessageRow, error) {
-	sessionSet := make(map[string]struct{}, len(sessions))
-	for _, session := range sessions {
-		sessionSet[session.id] = struct{}{}
-	}
-	rows, err := querySQLiteRows(ctx, tx, "message", columns)
+func loadOpenCodeSessionMessages(ctx context.Context, tx *sql.Tx, columns []string, session openCodeSessionRow, seenMessageIDs map[string]struct{}) ([]*openCodeMessageRow, error) {
+	rows, err := querySQLiteRowsWhere(ctx, tx, "message", columns, "session_id", session.id)
 	if err != nil {
 		return nil, err
 	}
-	seen := make(map[string]struct{}, len(rows))
 	messages := make([]*openCodeMessageRow, 0, len(rows))
 	for ordinal, row := range rows {
 		id, err := requiredSQLiteString(row, columns, "id", "message")
@@ -573,13 +552,13 @@ func loadOpenCodeMessages(ctx context.Context, tx *sql.Tx, columns []string, ses
 		if err != nil {
 			return nil, err
 		}
-		if _, exists := sessionSet[sessionID]; !exists {
-			return nil, corpusError(CodeInputJSON, "OpenCode message refers to an unknown session", nil)
+		if sessionID != session.id {
+			return nil, corpusError(CodeInputJSON, "OpenCode message session changed during scan", nil)
 		}
-		if _, exists := seen[id]; exists {
+		if _, exists := seenMessageIDs[id]; exists {
 			return nil, corpusError(CodeInputJSON, "duplicate OpenCode message ID", nil)
 		}
-		seen[id] = struct{}{}
+		seenMessageIDs[id] = struct{}{}
 		data, err := requiredSQLiteJSON(row, columns, "data", "message")
 		if err != nil {
 			return nil, err
@@ -593,20 +572,15 @@ func loadOpenCodeMessages(ctx context.Context, tx *sql.Tx, columns []string, ses
 	return messages, nil
 }
 
-func loadOpenCodeParts(ctx context.Context, tx *sql.Tx, columns []string, sessions []openCodeSessionRow, messages []*openCodeMessageRow) error {
-	sessionSet := make(map[string]struct{}, len(sessions))
+func loadOpenCodeSessionParts(ctx context.Context, tx *sql.Tx, columns []string, session openCodeSessionRow, messages []*openCodeMessageRow, seenPartIDs map[string]struct{}) error {
 	messageSet := make(map[string]*openCodeMessageRow, len(messages))
-	for _, session := range sessions {
-		sessionSet[session.id] = struct{}{}
-	}
 	for _, message := range messages {
 		messageSet[message.id] = message
 	}
-	rows, err := querySQLiteRows(ctx, tx, "part", columns)
+	rows, err := querySQLiteRowsWhere(ctx, tx, "part", columns, "session_id", session.id)
 	if err != nil {
 		return err
 	}
-	seen := make(map[string]struct{}, len(rows))
 	for ordinal, row := range rows {
 		id, err := requiredSQLiteString(row, columns, "id", "part")
 		if err != nil {
@@ -620,20 +594,17 @@ func loadOpenCodeParts(ctx context.Context, tx *sql.Tx, columns []string, sessio
 		if err != nil {
 			return err
 		}
-		if _, exists := sessionSet[sessionID]; !exists {
-			return corpusError(CodeInputJSON, "OpenCode part refers to an unknown session", nil)
+		if sessionID != session.id {
+			return corpusError(CodeInputJSON, "OpenCode part session changed during scan", nil)
 		}
 		message, exists := messageSet[messageID]
 		if !exists {
 			return corpusError(CodeInputJSON, "OpenCode part refers to an unknown message", nil)
 		}
-		if message.sessionID != sessionID {
-			return corpusError(CodeInputJSON, "OpenCode part session/message relationship is inconsistent", nil)
-		}
-		if _, exists := seen[id]; exists {
+		if _, exists := seenPartIDs[id]; exists {
 			return corpusError(CodeInputJSON, "duplicate OpenCode part ID", nil)
 		}
-		seen[id] = struct{}{}
+		seenPartIDs[id] = struct{}{}
 		data, err := requiredSQLiteJSON(row, columns, "data", "part")
 		if err != nil {
 			return err
@@ -644,8 +615,20 @@ func loadOpenCodeParts(ctx context.Context, tx *sql.Tx, columns []string, sessio
 }
 
 func querySQLiteRows(ctx context.Context, tx *sql.Tx, table string, columns []string) (result []map[string]any, returnErr error) {
+	return querySQLiteRowsWhere(ctx, tx, table, columns, "", nil)
+}
+
+// querySQLiteRowsWhere reads one table, optionally restricted to rows where a
+// column equals a value, so large stores can be imported per session instead
+// of being buffered in full.
+func querySQLiteRowsWhere(ctx context.Context, tx *sql.Tx, table string, columns []string, column string, value any) (result []map[string]any, returnErr error) {
 	query := `SELECT * FROM "` + table + `"`
-	rows, err := tx.QueryContext(ctx, query)
+	args := []any(nil)
+	if column != "" {
+		query += ` WHERE "` + column + `" = ?`
+		args = append(args, value)
+	}
+	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, corpusError(CodeInputJSON, "read OpenCode "+table+" rows", err)
 	}

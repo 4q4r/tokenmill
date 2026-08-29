@@ -1,4 +1,4 @@
-//go:build linux && (amd64 || arm64)
+//go:build linux
 
 package corpus
 
@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
-	"unsafe"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/tokenmill/tokenmill/internal/replay"
 )
@@ -35,40 +35,22 @@ var linkTemporary = func(directory, temporary *os.File, outputPath string) error
 	if directory == nil || temporary == nil {
 		return fmt.Errorf("temporary and output directory descriptors are required")
 	}
-	newPath, err := syscall.BytePtrFromString(filepath.Base(outputPath))
-	if err != nil {
-		return err
-	}
-	emptyPath, err := syscall.BytePtrFromString("")
-	if err != nil {
-		return err
-	}
-	_, _, errno := syscall.Syscall6(
-		syscall.SYS_LINKAT,
-		uintptr(temporary.Fd()), uintptr(unsafe.Pointer(emptyPath)),
-		uintptr(directory.Fd()), uintptr(unsafe.Pointer(newPath)), uintptr(linuxATEmptyPath), 0,
-	)
-	if errno == 0 {
+	newPath := filepath.Base(outputPath)
+	err := unix.Linkat(int(temporary.Fd()), "", int(directory.Fd()), newPath, unix.AT_EMPTY_PATH)
+	if err == nil {
 		return nil
 	}
-	if errno != syscall.EINVAL && errno != syscall.ENOENT && errno != syscall.EPERM {
-		return errno
+	if !errors.Is(err, unix.EINVAL) && !errors.Is(err, unix.ENOENT) && !errors.Is(err, unix.EPERM) {
+		return err
 	}
 
 	// AT_EMPTY_PATH can require CAP_DAC_READ_SEARCH. With procfs available,
 	// the kernel's stable /proc/self/fd link is the documented descriptor-based
 	// alternative and cannot be replaced through the output directory.
-	procPath, err := syscall.BytePtrFromString(fmt.Sprintf("/proc/self/fd/%d", temporary.Fd()))
-	if err != nil {
-		return err
-	}
-	_, _, procErrno := syscall.Syscall6(
-		syscall.SYS_LINKAT,
-		uintptr(^uint(99)), uintptr(unsafe.Pointer(procPath)),
-		uintptr(directory.Fd()), uintptr(unsafe.Pointer(newPath)), uintptr(linuxATSymlinkFollow), 0,
-	)
-	if procErrno != 0 {
-		return errors.Join(errno, procErrno)
+	procPath := fmt.Sprintf("/proc/self/fd/%d", temporary.Fd())
+	procErr := unix.Linkat(unix.AT_FDCWD, procPath, int(directory.Fd()), newPath, unix.AT_SYMLINK_FOLLOW)
+	if procErr != nil {
+		return errors.Join(err, procErr)
 	}
 	return nil
 }
@@ -83,7 +65,7 @@ func unlinkDirectoryEntry(directory *os.File, name string) error {
 	if directory == nil {
 		return fmt.Errorf("output directory descriptor is required")
 	}
-	err := syscall.Unlinkat(int(directory.Fd()), name)
+	err := unix.Unlinkat(int(directory.Fd()), name, 0)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
@@ -102,7 +84,7 @@ func unlinkOwnedPublishedOutput(directory *os.File, outputPath string, expected 
 		return err
 	}
 	name := filepath.Base(outputPath)
-	if err := moveOutputEntry(directory, name, tombstoneName, linuxRenameNoReplace); err != nil {
+	if err := moveOutputEntry(directory, name, tombstoneName, unix.RENAME_NOREPLACE); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -142,42 +124,28 @@ func openCleanupEntry(directory *os.File, name string) (*os.File, error) {
 	if directory == nil {
 		return nil, fmt.Errorf("output directory descriptor is required")
 	}
-	fd, err := syscall.Openat(int(directory.Fd()), name, linuxOPath|syscall.O_CLOEXEC|syscall.O_NOFOLLOW, 0)
+	fd, err := unix.Openat(int(directory.Fd()), name, unix.O_PATH|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {
 		return nil, err
 	}
 	file := os.NewFile(uintptr(fd), directory.Name()+" (cleanup inspection)")
 	if file == nil {
-		_ = syscall.Close(fd)
+		_ = unix.Close(fd)
 		return nil, fmt.Errorf("open cleanup inspection handle")
 	}
 	return file, nil
 }
 
 func restoreMovedOutput(directory *os.File, outputName, tombstoneName string) error {
-	return moveOutputEntry(directory, tombstoneName, outputName, linuxRenameNoReplace)
+	return moveOutputEntry(directory, tombstoneName, outputName, unix.RENAME_NOREPLACE)
 }
 
 func moveOutput(directory *os.File, first, second string, flags uintptr) error {
 	if directory == nil {
 		return fmt.Errorf("output directory descriptor is required")
 	}
-	firstPath, err := syscall.BytePtrFromString(first)
-	if err != nil {
+	if err := unix.Renameat2(int(directory.Fd()), first, int(directory.Fd()), second, uint(flags)); err != nil {
 		return err
-	}
-	secondPath, err := syscall.BytePtrFromString(second)
-	if err != nil {
-		return err
-	}
-	_, _, errno := syscall.Syscall6(
-		linuxSYSRenameat2,
-		uintptr(directory.Fd()), uintptr(unsafe.Pointer(firstPath)),
-		uintptr(directory.Fd()), uintptr(unsafe.Pointer(secondPath)),
-		flags, 0,
-	)
-	if errno != 0 {
-		return errno
 	}
 	return nil
 }
@@ -277,9 +245,9 @@ func openAnonymousTemporary(directory *os.File, displayPath string) (*os.File, e
 	if directory == nil {
 		return nil, fmt.Errorf("output directory descriptor is required")
 	}
-	fd, err := syscall.Openat(
+	fd, err := unix.Openat(
 		int(directory.Fd()), ".",
-		linuxOTmpfile|syscall.O_RDWR|syscall.O_CLOEXEC,
+		unix.O_TMPFILE|unix.O_RDWR|unix.O_CLOEXEC,
 		0o600,
 	)
 	if err != nil {
@@ -287,7 +255,7 @@ func openAnonymousTemporary(directory *os.File, displayPath string) (*os.File, e
 	}
 	temporary := os.NewFile(uintptr(fd), displayPath+" (anonymous temporary)")
 	if temporary == nil {
-		_ = syscall.Close(fd)
+		_ = unix.Close(fd)
 		return nil, fmt.Errorf("create anonymous temporary file handle")
 	}
 	if err := temporary.Chmod(0o600); err != nil {
@@ -300,14 +268,14 @@ func duplicateTemporary(file *os.File) (*os.File, error) {
 	if file == nil {
 		return nil, fmt.Errorf("temporary descriptor is required")
 	}
-	fd, err := syscall.Dup(int(file.Fd()))
+	fd, err := unix.Dup(int(file.Fd()))
 	if err != nil {
 		return nil, err
 	}
-	syscall.CloseOnExec(fd)
+	unix.CloseOnExec(fd)
 	duplicate := os.NewFile(uintptr(fd), file.Name()+" (publication descriptor)")
 	if duplicate == nil {
-		_ = syscall.Close(fd)
+		_ = unix.Close(fd)
 		return nil, fmt.Errorf("duplicate temporary file handle")
 	}
 	return duplicate, nil
@@ -317,14 +285,14 @@ func duplicateOutputDirectory(file *os.File) (*os.File, error) {
 	if file == nil {
 		return nil, fmt.Errorf("output directory descriptor is required")
 	}
-	fd, err := syscall.Dup(int(file.Fd()))
+	fd, err := unix.Dup(int(file.Fd()))
 	if err != nil {
 		return nil, err
 	}
-	syscall.CloseOnExec(fd)
+	unix.CloseOnExec(fd)
 	duplicate := os.NewFile(uintptr(fd), file.Name()+" (rollback directory descriptor)")
 	if duplicate == nil {
-		_ = syscall.Close(fd)
+		_ = unix.Close(fd)
 		return nil, fmt.Errorf("duplicate output directory handle")
 	}
 	return duplicate, nil

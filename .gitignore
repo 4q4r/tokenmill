@@ -11,4 +11,12 @@ findings.md
 progress.md
 task_plan.md
 corpus.jsonl
+tokenmill-bench/
+tokenmill-bench-corpus/
+tokenmill-live-check/
+tokenmill-live-tmp/
 *.log
+*.out
+*.test
+coverage.*
+.DS_Store

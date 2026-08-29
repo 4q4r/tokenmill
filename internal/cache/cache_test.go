@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"hash"
 	"strings"
 	"sync"
 	"testing"
@@ -362,13 +361,11 @@ func TestStabilizePrefix_VolatileExtraction(t *testing.T) {
 }
 
 func TestStabilizePrefix_StableHashEquality(t *testing.T) {
-	template := "System: You are assistant.\nTime: %s\nRequest: %s\nTask: help user"
 	timestamp1 := "2026-08-27T10:00:00Z"
 	timestamp2 := "2026-08-27T11:30:45.123Z"
 	uuid1 := "550e8400-e29b-41d4-a716-446655440000"
 	uuid2 := "123e4567-e89b-12d3-a456-426614174000"
-	sys1 := strings.ReplaceAll(strings.ReplaceAll(template, "%s", timestamp1), timestamp1, timestamp1) // hack to avoid fmt
-	sys1 = "System: You are assistant.\nTime: " + timestamp1 + "\nRequest: " + uuid1 + "\nTask: help user"
+	sys1 := "System: You are assistant.\nTime: " + timestamp1 + "\nRequest: " + uuid1 + "\nTask: help user"
 	sys2 := "System: You are assistant.\nTime: " + timestamp2 + "\nRequest: " + uuid2 + "\nTask: help user"
 	stable1, _ := StabilizePrefix(sys1)
 	stable2, _ := StabilizePrefix(sys2)
@@ -452,5 +449,7 @@ func TestStabilizePrefix_DatetimeVariations(t *testing.T) {
 
 func TestHashHelper(t *testing.T) {
 	// Verify hash function used
-	var _ hash.Hash = sha256.New()
+	if sha256.New().Size() != 32 {
+		t.Fatal("expected SHA-256 digest size of 32 bytes")
+	}
 }

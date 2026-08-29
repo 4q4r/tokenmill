@@ -1,4 +1,4 @@
-//go:build linux && (amd64 || arm64)
+//go:build linux
 
 package corpus
 
@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 	"unicode"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -94,24 +96,15 @@ const (
 	// DefaultMaxQuarantineEntries bounds retained rejected-line entries and
 	// their per-entry metadata independently of the payload-byte budget.
 	DefaultMaxQuarantineEntries = 4096
-
-	// Linux does not expose these constants through the deprecated syscall
-	// package. The package is intentionally Linux-specific because its source
-	// and output safety contracts depend on descriptor-relative syscalls.
-	linuxOPath           = 0x200000
-	linuxOTmpfile        = 0x410000
-	linuxATEmptyPath     = 0x1000
-	linuxATSymlinkFollow = 0x400
-	linuxSYSRenameat2    = 316
-	linuxRenameNoReplace = 0x1
-	linuxRenameExchange  = 0x2
 )
 
 // These seams keep raw descriptor cleanup failures deterministic in tests.
 // The default operations are the Linux syscalls used by secure traversal.
+// Constants and calls come from golang.org/x/sys/unix so the package builds
+// for every Linux architecture.
 var (
-	openSecureAt  = syscall.Openat
-	closeSecureFD = syscall.Close
+	openSecureAt  = unix.Openat
+	closeSecureFD = unix.Close
 )
 
 // Options is the single corpus safety configuration shared by readers and
@@ -268,7 +261,7 @@ func DiscoverArtifact(root, candidate string) (artifact Artifact, returnErr erro
 
 	file, err := openSecureRelative(rootDir, relative, false)
 	if err != nil {
-		if errors.Is(err, errSecurePathSymlink) || errors.Is(err, syscall.ELOOP) {
+		if errors.Is(err, errSecurePathSymlink) || errors.Is(err, unix.ELOOP) {
 			return Artifact{}, corpusError(CodePathEscape, "source path contains a symlink", err)
 		}
 		return Artifact{}, fmt.Errorf("open source artifact: %w", err)
@@ -317,7 +310,7 @@ func openSecureDirectory(path string) (*os.File, string, error) {
 	absolute = filepath.Clean(absolute)
 	directory, err := openSecurePath(absolute, true)
 	if err != nil {
-		if errors.Is(err, errSecurePathSymlink) || errors.Is(err, syscall.ELOOP) {
+		if errors.Is(err, errSecurePathSymlink) || errors.Is(err, unix.ELOOP) {
 			return nil, "", corpusError(CodePathEscape, "source root contains a symlink", err)
 		}
 		return nil, "", fmt.Errorf("open source root: %w", err)
@@ -342,11 +335,11 @@ func openSecurePath(path string, directory bool) (*os.File, error) {
 		return nil, fmt.Errorf("secure path must be an absolute Unix path")
 	}
 
-	flags := syscall.O_RDONLY | syscall.O_CLOEXEC | syscall.O_NOFOLLOW
+	flags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
 	if directory {
-		flags |= syscall.O_DIRECTORY
+		flags |= unix.O_DIRECTORY
 	}
-	fd, err := syscall.Open(string(filepath.Separator), flags, 0)
+	fd, err := unix.Open(string(filepath.Separator), flags, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -355,13 +348,13 @@ func openSecurePath(path string, directory bool) (*os.File, error) {
 		if component == "" || component == "." {
 			continue
 		}
-		componentFlags := syscall.O_RDONLY | syscall.O_CLOEXEC | syscall.O_NOFOLLOW
+		componentFlags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
 		if index < len(components)-1 || directory {
-			componentFlags |= syscall.O_DIRECTORY
+			componentFlags |= unix.O_DIRECTORY
 		}
 		nextFD, openErr := openSecureComponent(fd, component, componentFlags)
 		if openErr != nil {
-			if errors.Is(openErr, syscall.ELOOP) {
+			if errors.Is(openErr, unix.ELOOP) {
 				return nil, errors.Join(errSecurePathSymlink, openErr)
 			}
 			return nil, openErr
@@ -415,7 +408,7 @@ func openSecureRelative(root *os.File, relative string, directory bool) (*os.Fil
 	if clean == "." || filepath.IsAbs(clean) {
 		return nil, corpusError(CodePathEscape, "source path is outside root", nil)
 	}
-	fd, err := syscall.Dup(int(root.Fd()))
+	fd, err := unix.Dup(int(root.Fd()))
 	if err != nil {
 		return nil, fmt.Errorf("duplicate source root descriptor: %w", err)
 	}
@@ -428,17 +421,17 @@ func openSecureRelative(root *os.File, relative string, directory bool) (*os.Fil
 			closeErr := closeSecureFD(fd)
 			return nil, errors.Join(corpusError(CodePathEscape, "source path is outside root", nil), closeErr)
 		}
-		flags := syscall.O_RDONLY | syscall.O_CLOEXEC | syscall.O_NOFOLLOW
+		flags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
 		if index < len(components)-1 || directory {
-			flags |= syscall.O_DIRECTORY
+			flags |= unix.O_DIRECTORY
 		} else {
 			// Opening a FIFO read-only without O_NONBLOCK can block before the
 			// later regular-file check gets a chance to reject it.
-			flags |= syscall.O_NONBLOCK
+			flags |= unix.O_NONBLOCK
 		}
 		nextFD, openErr := openSecureComponent(fd, component, flags)
 		if openErr != nil {
-			if errors.Is(openErr, syscall.ELOOP) {
+			if errors.Is(openErr, unix.ELOOP) {
 				return nil, errors.Join(errSecurePathSymlink, openErr)
 			}
 			return nil, openErr
@@ -783,6 +776,8 @@ func hashOpenedFile(file *os.File) (string, error) {
 }
 
 func fileInode(info os.FileInfo) uint64 {
+	// os.FileInfo.Sys() always carries the standard-library Stat_t on Linux;
+	// the x/sys/unix type is a distinct Go type and would not assert here.
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return 0

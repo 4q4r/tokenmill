@@ -15,7 +15,7 @@ Import OpenCode, Claude Code, and Codex session stores into a tamper-evident, re
 [![CI](https://img.shields.io/github/actions/workflow/status/4q4r/tokenmill/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white)](https://github.com/4q4r/tokenmill/actions/workflows/ci.yml)
 [![Last commit](https://img.shields.io/github/last-commit/4q4r/tokenmill?style=flat-square&logo=github&logoColor=white)](https://github.com/4q4r/tokenmill/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/4q4r/tokenmill?style=flat-square&logo=github&logoColor=white)](https://github.com/4q4r/tokenmill)
-[![Platform](https://img.shields.io/badge/Platform-linux%20amd64%20%7C%20arm64-4C1?style=flat-square&logo=linux&logoColor=white)](https://github.com/4q4r/tokenmill)
+[![Platform](https://img.shields.io/badge/Platform-linux%20any%20arch-4C1?style=flat-square&logo=linux&logoColor=white)](https://github.com/4q4r/tokenmill)
 [![License](https://img.shields.io/badge/License-MIT-3DA639?style=flat-square&logo=opensourceinitiative&logoColor=white)](LICENSE)
 
 [Architecture](#-system-architecture) · [Techniques](#-lossless-techniques) · [Benchmarks](#-measured-performance) · [Security](#-security) · [Quick Start](#-quick-start)
@@ -35,7 +35,6 @@ Import OpenCode, Claude Code, and Codex session stores into a tamper-evident, re
 - [Configuration](#-configuration)
 - [Quick Start](#-quick-start)
 - [Testing](#-testing)
-- [Roadmap](#-roadmap)
 - [License](#-license)
 
 ---
@@ -129,10 +128,10 @@ tokenmill/
 
 | Module | Purpose |
 | :-- | :-- |
-| `corpus` | Read-only import of OpenCode/Claude/Codex stores, redaction, quarantine, all-or-nothing atomic publication |
+| `corpus` | Read-only import of OpenCode/Claude/Codex stores — streamed per session so peak memory tracks the largest session, not the store — with redaction, quarantine, and all-or-nothing atomic publication |
 | `codec` + `tournament` | 17 lossless codecs and the per-payload selection tournament with verification gates |
 | `tokenizer` | Accurate `o200k_base` token counting, savings math, memoized counter |
-| `cache` | Provider-neutral prompt-cache metadata: breakpoints, stable prefixes, cache scope keys |
+| `cache` | Provider-neutral prompt-cache metadata: model-family detection, breakpoint planning (Anthropic-style explicit markers; implicit for OpenAI/Google), stable prefixes, cache scope keys |
 | `plugin/tokenmill.ts` | OpenCode plugin: keeps the conversation's stable prefix untouched and computes cache scopes per tool schema |
 | `stats` | SQLite tracking of every rewrite: tokens in/out, saved, percentage |
 | `config` | One configuration source (`tokenmill.jsonc`) mirrored across CLI and plugin |
@@ -190,6 +189,11 @@ imported; 4,079-message random sample, 19.5 M tokens, `o200k_base`):
 - **Prefix-cache proxy: 100.00 %** both with and without the pipeline over a
   120-step growing conversation — per-message stateless codecs keep the
   provider prompt cache fully warm.
+- **Plugin end-to-end over live tool outputs** (3,528 real bash/patch/file
+  results, 12.6 MB): the stable-prefix transform fires only on its narrowly
+  recognized metadata pattern (0 of 3,528 outputs — conservative by design),
+  reordering is byte-exact where it fires, throughput is 219 MB/s, and cache
+  scopes are deterministic across 50 repeats while staying distinct per tool.
 - Losslessness held everywhere: the only verify failures were 1.2 % of tables
   under `table-tsv`, which passed through uncompressed.
 - Every number is reproducible: the gates below run the same code paths.
@@ -203,7 +207,8 @@ imported; 4,079-message random sample, 19.5 M tokens, `o200k_base`):
   descriptor-relative `linkat`; any failure (flush, sync, identity check,
   cleanup) unlinks the output instead of leaving a partial corpus.
 - **Descriptor-anchored traversal** — sources are opened with component-wise
-  `openat`/`O_NOFOLLOW`; hashes and reads are pinned to held descriptors, so
+  `openat`/`O_NOFOLLOW` via `golang.org/x/sys/unix` (portable across all
+  Linux architectures); hashes and reads are pinned to held descriptors, so
   path races cannot swap files mid-read.
 - **Fail-closed source integrity** — database + WAL/SHM companions are
   snapshotted before and after every read; any change returns
@@ -311,15 +316,6 @@ bun test plugin/tokenmill.test.ts
 Container and dependency scanning are covered locally by Trivy
 (`trivy fs --scanners vuln,secret,misconfig .`); CI runs the Go and plugin
 suites on every push (`.github/workflows/ci.yml`).
-
----
-
-## 🗺️ Roadmap
-
-- [ ] End-to-end plugin benchmark over live tool outputs (terminal, diffs, API payloads)
-- [ ] Cross-arch syscalls via `golang.org/x/sys/unix` (remove the amd64/arm64 build constraint)
-- [ ] Streaming import for very large stores (currently whole-store snapshot)
-- [ ] Provider adapters for cache-breakpoint placement per model family
 
 ---
 
