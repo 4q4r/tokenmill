@@ -112,6 +112,9 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"csv-canonical":       {},
 		"symbol-table":        {},
 		"diff-log-fold":       {},
+		"text-norm":           {},
+		"html-entity":         {},
+		"base64-compact":      {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -155,6 +158,9 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.CsvCanonical = false
 	cfg.Techniques.SymbolTable = false
 	cfg.Techniques.DiffLogFold = false
+	cfg.Techniques.UnicodeNormalize = false
+	cfg.Techniques.HtmlEntityDecode = false
+	cfg.Techniques.Base64Compact = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)

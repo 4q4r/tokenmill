@@ -163,6 +163,9 @@ fall back to the original bytes.
 | cross-call pack | `cross-call-pack` | ❌ | Session-wide shared dictionary packer |
 | csv-canonical | `csv-canonical` | ❌ | Canonical CSV quoting and separators |
 | symbol-table | `symbol-table` | ❌ | Repeated word-like tokens → abbreviation table |
+| text-norm | `text-norm` | ✅ | Strips invisible Unicode (zero-width, soft hyphens, BOM, bidi/tag/control characters), maps NBSP and exotic spaces to plain space, composes NFC — the copy-paste junk that inflates tokens and destabilizes tokenization |
+| html-entity | `html-entity` | ✅ | Decodes HTML entities (`&amp;` `&lt;` `&#39;`…) into the characters a reader actually sees |
+| base64-compact | `base64-compact` | ✅ | Removes line-wrapping whitespace inside decodable base64 payloads (byte-lossless by spec); undecodable runs are never touched |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |
 
 The tournament applies a codec only when verified savings clear both gates

@@ -45,7 +45,10 @@
     "crossCallPack": true,
     "csvCanonical": true,
     "symbolTable": true,
-    "diffLogFold": true
+    "diffLogFold": true,
+    "unicodeNormalize": true,
+    "htmlEntityDecode": true,
+    "base64Compact": true
   },
   "experimental": {
     "gcfGraph": false,

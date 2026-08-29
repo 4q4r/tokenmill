@@ -18,6 +18,7 @@ import (
 	"github.com/tokenmill/tokenmill/internal/codec/markdown"
 	"github.com/tokenmill/tokenmill/internal/codec/opaque"
 	"github.com/tokenmill/tokenmill/internal/codec/symboltable"
+	"github.com/tokenmill/tokenmill/internal/codec/textnorm"
 	"github.com/tokenmill/tokenmill/internal/config"
 	"github.com/tokenmill/tokenmill/internal/detector"
 	"github.com/tokenmill/tokenmill/internal/dictionary"
@@ -393,8 +394,90 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.DiffLogFold {
 		pool = append(pool, folding.New())
 	}
+	if cfg.Techniques.UnicodeNormalize {
+		pool = append(pool, &textNormWrapper{})
+	}
+	if cfg.Techniques.HtmlEntityDecode {
+		pool = append(pool, &htmlEntityWrapper{})
+	}
+	if cfg.Techniques.Base64Compact {
+		pool = append(pool, &base64CompactWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+type textNormWrapper struct{}
+
+func (w *textNormWrapper) ID() string           { return "text-norm" }
+func (w *textNormWrapper) Detect(s string) bool { return textnorm.NeedsNormalization(s) }
+func (w *textNormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.Normalize(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *textNormWrapper) Encode(s string) (string, error) { return textnorm.Normalize(s), nil }
+func (w *textNormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("text-norm is display-lossless, no decode")
+}
+func (w *textNormWrapper) Verify(orig, enc string) bool {
+	return textnorm.Normalize(orig) == enc
+}
+
+type htmlEntityWrapper struct{}
+
+func (w *htmlEntityWrapper) ID() string           { return "html-entity" }
+func (w *htmlEntityWrapper) Detect(s string) bool { return textnorm.HasHTMLEntities(s) }
+func (w *htmlEntityWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.UnescapeEntities(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *htmlEntityWrapper) Encode(s string) (string, error) {
+	return textnorm.UnescapeEntities(s), nil
+}
+func (w *htmlEntityWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("html-entity decode is display-lossless")
+}
+func (w *htmlEntityWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnescapeEntities(orig) == enc
+}
+
+type base64CompactWrapper struct{}
+
+func (w *base64CompactWrapper) ID() string           { return "base64-compact" }
+func (w *base64CompactWrapper) Detect(s string) bool { return textnorm.HasCompactableBase64(s) }
+func (w *base64CompactWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CompactBase64(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *base64CompactWrapper) Encode(s string) (string, error) {
+	return textnorm.CompactBase64(s), nil
+}
+func (w *base64CompactWrapper) Decode(enc string) (string, error) {
+	return enc, fmt.Errorf("base64-compact only removes decoder-ignored whitespace")
+}
+func (w *base64CompactWrapper) Verify(orig, enc string) bool {
+	return textnorm.CompactBase64(orig) == enc
 }
 
 func newRewriteCmd() *cobra.Command {

@@ -27,6 +27,9 @@ var definitions = []Definition{
 	{ID: "stacktrace-dict", CodecID: "stacktrace-dict", Aliases: []string{"stacktrace"}},
 	{ID: "symbol-table", CodecID: "symbol-table"},
 	{ID: "table-tsv", CodecID: "table-tsv"},
+	{ID: "text-norm", CodecID: "text-norm"},
+	{ID: "html-entity", CodecID: "html-entity"},
+	{ID: "base64-compact", CodecID: "base64-compact"},
 }
 
 var names = buildNames()

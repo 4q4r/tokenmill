@@ -93,6 +93,9 @@ type Techniques struct {
 	CsvCanonical       bool           `json:"csvCanonical" mapstructure:"csvCanonical"`
 	SymbolTable        bool           `json:"symbolTable" mapstructure:"symbolTable"`
 	DiffLogFold        bool           `json:"diffLogFold" mapstructure:"diffLogFold"`
+	UnicodeNormalize   bool           `json:"unicodeNormalize" mapstructure:"unicodeNormalize"`
+	HtmlEntityDecode   bool           `json:"htmlEntityDecode" mapstructure:"htmlEntityDecode"`
+	Base64Compact      bool           `json:"base64Compact" mapstructure:"base64Compact"`
 }
 
 type ExactRLE struct {
@@ -194,6 +197,9 @@ func DefaultConfig() Config {
 			CsvCanonical:       false,
 			SymbolTable:        false,
 			DiffLogFold:        false,
+			UnicodeNormalize:   true,
+			HtmlEntityDecode:   true,
+			Base64Compact:      true,
 		},
 		Experimental: Experimental{
 			"ison":     false,
