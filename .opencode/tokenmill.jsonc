@@ -26,10 +26,10 @@
       "minCount": 3
     },
     "substringDict": {
-      "enabled": false,
+      "enabled": true,
       "minLen": 40,
       "minCount": 4,
-      "experimental": false
+      "experimental": true
     },
     "jton": {
       "enabled": true,
@@ -40,12 +40,12 @@
     "stacktraceDict": true,
     "jcs": true,
     "jsonNumber": true,
-    "markdownWhitespace": false,
-    "opaqueDict": false,
-    "crossCallPack": false,
-    "csvCanonical": false,
-    "symbolTable": false,
-    "diffLogFold": false
+    "markdownWhitespace": true,
+    "opaqueDict": true,
+    "crossCallPack": true,
+    "csvCanonical": true,
+    "symbolTable": true,
+    "diffLogFold": true
   },
   "experimental": {
     "gcfGraph": false,
