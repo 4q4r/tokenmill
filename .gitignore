@@ -1,0 +1,14 @@
+# Local working artifacts (not part of the public repository)
+.gotmp/
+.claude-state/
+.review-probe/
+.superpowers/
+docs/
+node_modules/
+rating.json
+REPORT.md
+findings.md
+progress.md
+task_plan.md
+corpus.jsonl
+*.log

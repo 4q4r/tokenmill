@@ -1,0 +1,8 @@
+{"timestamp":"2026-08-27T12:00:00Z","type":"session_meta","payload":{"id":"session-codex-1","provider":"fixture","cli_version":"fixture-version"}}
+{"timestamp":"2026-08-27T12:00:01Z","type":"turn_context","payload":{"session_id":"session-codex-1","turn_id":"turn-1","model":"fixture-model","context":"Привет, мир 🌍"}}
+{"timestamp":"2026-08-27T12:00:02Z","type":"event_msg","payload":{"session_id":"session-codex-1","type":"user_message","message":"Привет, мир 🌍"}}
+{"timestamp":"2026-08-27T12:00:03Z","type":"response_item","payload":{"session_id":"session-codex-1","type":"function_call","name":"shell","call_id":"call-codex-1","arguments":"{\"command\":\"printf fixture\",\"provider_key\":\"fixture-provider-secret\"}"}}
+{"timestamp":"2026-08-27T12:00:04Z","type":"response_item","payload":{"session_id":"session-codex-1","type":"function_call_output","call_id":"call-codex-1","output":"готово"}}
+{"timestamp":"2026-08-27T12:00:05Z","type":"response_item","payload":{"session_id":"session-codex-1","type":"message","role":"assistant","content":[{"type":"output_text","text":"Ответ fixture"},{"type":"future_block","unicode":"未知","vendor":{"safe":true,"cookieHeader":"fixture-cookie-secret"}}]}}
+{"timestamp":"2026-08-27T12:00:06Z","type":"future_event","payload":{"preserve":true,"aws_key":"fixture-aws-secret","gcp_key":"fixture-gcp-secret"}}
+{"timestamp":"2026-08-27T12:00:07Z","type":"response_item"

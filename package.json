@@ -1,0 +1,13 @@
+{
+  "name": "opencode-tokenmill",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.23",
+    "solid-js": "^1.9.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2"
+  }
+}

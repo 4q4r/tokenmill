@@ -1,0 +1,54 @@
+{
+  "enabled": true,
+  "logSavings": true,
+  "logLevel": "info",
+  "showUpdateEvery": 10,
+  "minSavingsPercent": 10,
+  "minSavingsTokens": 32,
+  "freshnessTurns": 20,
+  "tracking": {},
+  "techniques": {
+    "dedup": true,
+    "ansiStripping": true,
+    "crRendering": true,
+    "exactRLE": {
+      "enabled": true,
+      "minRun": 3
+    },
+    "blockFactoring": {
+      "enabled": true,
+      "minBlock": 2,
+      "maxBlock": 20
+    },
+    "pathDict": {
+      "enabled": true,
+      "maxCodes": 5,
+      "minCount": 3
+    },
+    "substringDict": {
+      "enabled": false,
+      "minLen": 40,
+      "minCount": 4,
+      "experimental": false
+    },
+    "jton": {
+      "enabled": true,
+      "minRows": 10
+    },
+    "jsonCompact": true,
+    "tableTSV": true,
+    "stacktraceDict": true,
+    "jcs": true,
+    "jsonNumber": true,
+    "markdownWhitespace": false,
+    "opaqueDict": false,
+    "crossCallPack": false,
+    "csvCanonical": false,
+    "symbolTable": false,
+    "diffLogFold": false
+  },
+  "experimental": {
+    "gcfGraph": false,
+    "ison": false
+  }
+}

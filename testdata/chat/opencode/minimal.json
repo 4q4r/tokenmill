@@ -1,0 +1,85 @@
+{
+  "session": {
+    "id": "session-opencode-1",
+    "version": "1.18.21",
+    "project_id": "project-fixture"
+  },
+  "messages": [
+    {
+      "id": "message-system",
+      "session_id": "session-opencode-1",
+      "data": {
+        "role": "system",
+        "time": {"created": 1000},
+        "model": {"providerID": "fixture", "modelID": "fixture-model"}
+      }
+    },
+    {
+      "id": "message-user",
+      "session_id": "session-opencode-1",
+      "data": {
+        "role": "user",
+        "time": {"created": 2000}
+      }
+    },
+    {
+      "id": "message-assistant",
+      "session_id": "session-opencode-1",
+      "data": {
+        "role": "assistant",
+        "time": {"created": 3000},
+        "model": {"providerID": "fixture", "modelID": "fixture-model"}
+      }
+    }
+  ],
+  "parts": [
+    {
+      "id": "part-system",
+      "session_id": "session-opencode-1",
+      "message_id": "message-system",
+      "data": {"type": "text", "text": "System fixture"}
+    },
+    {
+      "id": "part-user",
+      "session_id": "session-opencode-1",
+      "message_id": "message-user",
+      "data": {"type": "text", "text": "Привет, мир 🌍"}
+    },
+    {
+      "id": "part-tool-call",
+      "session_id": "session-opencode-1",
+      "message_id": "message-assistant",
+      "data": {
+        "type": "tool",
+        "callID": "call-opencode-1",
+        "tool": "shell",
+        "state": {
+          "status": "completed",
+          "input": {"command": "printf fixture", "provider_key": "fixture-provider-secret"},
+          "output": "готово"
+        }
+      }
+    },
+    {
+      "id": "part-tool-result",
+      "session_id": "session-opencode-1",
+      "message_id": "message-assistant",
+      "data": {
+        "type": "tool_result",
+        "callID": "call-opencode-1",
+        "output": "готово"
+      }
+    },
+    {
+      "id": "part-unknown",
+      "session_id": "session-opencode-1",
+      "message_id": "message-assistant",
+      "data": {
+        "type": "future_part",
+        "unicode": "未知",
+        "vendor": {"safe": true, "cookieHeader": "fixture-cookie-secret"}
+      }
+    }
+  ],
+  "unknown_event": {"type": "future_event", "preserve": true}
+}
