@@ -54,7 +54,17 @@
     "prefixFold": true,
     "unicodeUnescape": true,
     "uuidCompact": true,
-    "smartPunct": true
+    "smartPunct": true,
+    "mojibakeFix": true,
+    "idnDecode": true,
+    "ipv6Norm": true,
+    "csvUnquote": true,
+    "sqlMinify": true,
+    "isoNorm": true,
+    "epochToIso": true,
+    "mdLinkRef": true,
+    "xmlCdata": true,
+    "headerNorm": true
   },
   "experimental": {
     "gcfGraph": false,

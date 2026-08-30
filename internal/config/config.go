@@ -102,6 +102,16 @@ type Techniques struct {
 	UnicodeUnescape    bool           `json:"unicodeUnescape" mapstructure:"unicodeUnescape"`
 	UUIDCompact        bool           `json:"uuidCompact" mapstructure:"uuidCompact"`
 	SmartPunct         bool           `json:"smartPunct" mapstructure:"smartPunct"`
+	MojibakeFix        bool           `json:"mojibakeFix" mapstructure:"mojibakeFix"`
+	IdnDecode          bool           `json:"idnDecode" mapstructure:"idnDecode"`
+	Ipv6Norm           bool           `json:"ipv6Norm" mapstructure:"ipv6Norm"`
+	CsvUnquote         bool           `json:"csvUnquote" mapstructure:"csvUnquote"`
+	SqlMinify          bool           `json:"sqlMinify" mapstructure:"sqlMinify"`
+	IsoNorm            bool           `json:"isoNorm" mapstructure:"isoNorm"`
+	EpochToISO         bool           `json:"epochToIso" mapstructure:"epochToIso"`
+	MdLinkRef          bool           `json:"mdLinkRef" mapstructure:"mdLinkRef"`
+	XmlCdata           bool           `json:"xmlCdata" mapstructure:"xmlCdata"`
+	HeaderNorm         bool           `json:"headerNorm" mapstructure:"headerNorm"`
 }
 
 type ExactRLE struct {
@@ -212,6 +222,16 @@ func DefaultConfig() Config {
 			UnicodeUnescape:    true,
 			UUIDCompact:        true,
 			SmartPunct:         true,
+			MojibakeFix:        true,
+			IdnDecode:          true,
+			Ipv6Norm:           true,
+			CsvUnquote:         true,
+			SqlMinify:          true,
+			IsoNorm:            true,
+			EpochToISO:         true,
+			MdLinkRef:          true,
+			XmlCdata:           true,
+			HeaderNorm:         true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

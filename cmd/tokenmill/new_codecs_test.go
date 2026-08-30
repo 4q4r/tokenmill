@@ -121,6 +121,16 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"unicode-unescape":    {},
 		"uuid-compact":        {},
 		"smart-punct":         {},
+		"mojibake-fix":        {},
+		"idn-decode":          {},
+		"ipv6-norm":           {},
+		"csv-unquote":         {},
+		"sql-minify":          {},
+		"iso-norm":            {},
+		"epoch-to-iso":        {},
+		"md-link-ref":         {},
+		"xml-cdata":           {},
+		"header-norm":         {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -173,6 +183,16 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.UnicodeUnescape = false
 	cfg.Techniques.UUIDCompact = false
 	cfg.Techniques.SmartPunct = false
+	cfg.Techniques.MojibakeFix = false
+	cfg.Techniques.IdnDecode = false
+	cfg.Techniques.Ipv6Norm = false
+	cfg.Techniques.CsvUnquote = false
+	cfg.Techniques.SqlMinify = false
+	cfg.Techniques.IsoNorm = false
+	cfg.Techniques.EpochToISO = false
+	cfg.Techniques.MdLinkRef = false
+	cfg.Techniques.XmlCdata = false
+	cfg.Techniques.HeaderNorm = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)

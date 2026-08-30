@@ -421,19 +421,301 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.SmartPunct {
 		pool = append(pool, &smartPunctWrapper{})
 	}
+	if cfg.Techniques.MojibakeFix {
+		pool = append(pool, &mojibakeFixWrapper{})
+	}
+	if cfg.Techniques.IdnDecode {
+		pool = append(pool, &idnDecodeWrapper{})
+	}
+	if cfg.Techniques.Ipv6Norm {
+		pool = append(pool, &ipv6NormWrapper{})
+	}
+	if cfg.Techniques.CsvUnquote {
+		pool = append(pool, &csvUnquoteWrapper{})
+	}
+	if cfg.Techniques.SqlMinify {
+		pool = append(pool, &sqlMinifyWrapper{})
+	}
+	if cfg.Techniques.IsoNorm {
+		pool = append(pool, &isoNormWrapper{})
+	}
+	if cfg.Techniques.EpochToISO {
+		pool = append(pool, &epochToISOWrapper{})
+	}
+	if cfg.Techniques.MdLinkRef {
+		pool = append(pool, &mdLinkRefWrapper{})
+	}
+	if cfg.Techniques.XmlCdata {
+		pool = append(pool, &xmlCdataWrapper{})
+	}
+	if cfg.Techniques.HeaderNorm {
+		pool = append(pool, &headerNormWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
 }
 
+type mojibakeFixWrapper struct{}
+
+func (w *mojibakeFixWrapper) ID() string           { return "mojibake-fix" }
+func (w *mojibakeFixWrapper) Detect(s string) bool { return textnorm.HasMojibake(s) }
+func (w *mojibakeFixWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.RepairMojibake(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *mojibakeFixWrapper) Encode(s string) (string, error) {
+	return textnorm.RepairMojibake(s), nil
+}
+func (w *mojibakeFixWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("mojibake-fix restores intended characters; no byte decode")
+}
+func (w *mojibakeFixWrapper) Verify(orig, enc string) bool {
+	return textnorm.RepairMojibake(orig) == enc
+}
+
+type idnDecodeWrapper struct{}
+
+func (w *idnDecodeWrapper) ID() string           { return "idn-decode" }
+func (w *idnDecodeWrapper) Detect(s string) bool { return textnorm.HasPunycodeLabels(s) }
+func (w *idnDecodeWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.DecodeIDNLabels(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *idnDecodeWrapper) Encode(s string) (string, error) {
+	return textnorm.DecodeIDNLabels(s), nil
+}
+func (w *idnDecodeWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("idn-decode is display-lossless; re-encoding needs IDNA rules")
+}
+func (w *idnDecodeWrapper) Verify(orig, enc string) bool {
+	return textnorm.DecodeIDNLabels(orig) == enc
+}
+
+type ipv6NormWrapper struct{}
+
+func (w *ipv6NormWrapper) ID() string           { return "ipv6-norm" }
+func (w *ipv6NormWrapper) Detect(s string) bool { return textnorm.HasNonCanonicalIPv6(s) }
+func (w *ipv6NormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CanonicalizeIPv6(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *ipv6NormWrapper) Encode(s string) (string, error) {
+	return textnorm.CanonicalizeIPv6(s), nil
+}
+func (w *ipv6NormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("ipv6-norm is canonicalization of the same address")
+}
+func (w *ipv6NormWrapper) Verify(orig, enc string) bool {
+	return textnorm.CanonicalizeIPv6(orig) == enc
+}
+
+type csvUnquoteWrapper struct{}
+
+func (w *csvUnquoteWrapper) ID() string           { return "csv-unquote" }
+func (w *csvUnquoteWrapper) Detect(s string) bool { return textnorm.HasOverQuotedCSV(s) }
+func (w *csvUnquoteWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.UnquoteCSV(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *csvUnquoteWrapper) Encode(s string) (string, error) {
+	return textnorm.UnquoteCSV(s), nil
+}
+func (w *csvUnquoteWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("csv-unquote preserves field values; original quoting is not reproducible")
+}
+func (w *csvUnquoteWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnquoteCSV(orig) == enc
+}
+
+type sqlMinifyWrapper struct{}
+
+func (w *sqlMinifyWrapper) ID() string           { return "sql-minify" }
+func (w *sqlMinifyWrapper) Detect(s string) bool { return textnorm.HasMinifiableSQL(s) }
+func (w *sqlMinifyWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.MinifySQL(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *sqlMinifyWrapper) Encode(s string) (string, error) {
+	return textnorm.MinifySQL(s), nil
+}
+func (w *sqlMinifyWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("sql-minify collapses formatting whitespace; no byte decode")
+}
+func (w *sqlMinifyWrapper) Verify(orig, enc string) bool {
+	return textnorm.MinifySQL(orig) == enc
+}
+
+type isoNormWrapper struct{}
+
+func (w *isoNormWrapper) ID() string           { return "iso-norm" }
+func (w *isoNormWrapper) Detect(s string) bool { return textnorm.HasNonCanonicalTimestamp(s) }
+func (w *isoNormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CanonicalizeTimestamps(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *isoNormWrapper) Encode(s string) (string, error) {
+	return textnorm.CanonicalizeTimestamps(s), nil
+}
+func (w *isoNormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("iso-norm canonicalizes the same instant")
+}
+func (w *isoNormWrapper) Verify(orig, enc string) bool {
+	return textnorm.CanonicalizeTimestamps(orig) == enc
+}
+
+type epochToISOWrapper struct{}
+
+func (w *epochToISOWrapper) ID() string           { return "epoch-to-iso" }
+func (w *epochToISOWrapper) Detect(s string) bool { return textnorm.HasEpochTimestamps(s) }
+func (w *epochToISOWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.EpochToISO(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *epochToISOWrapper) Encode(s string) (string, error) {
+	return textnorm.EpochToISO(s), nil
+}
+func (w *epochToISOWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("epoch-to-iso denotes the same instant; epoch form is not recoverable")
+}
+func (w *epochToISOWrapper) Verify(orig, enc string) bool {
+	return textnorm.EpochToISO(orig) == enc
+}
+
+type mdLinkRefWrapper struct{}
+
+func (w *mdLinkRefWrapper) ID() string           { return "md-link-ref" }
+func (w *mdLinkRefWrapper) Detect(s string) bool { return textnorm.HasDuplicatedMarkdownLinks(s) }
+func (w *mdLinkRefWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.FoldMarkdownLinks(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *mdLinkRefWrapper) Encode(s string) (string, error) {
+	return textnorm.FoldMarkdownLinks(s), nil
+}
+func (w *mdLinkRefWrapper) Decode(enc string) (string, error) {
+	return textnorm.UnfoldMarkdownLinks(enc), nil
+}
+func (w *mdLinkRefWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnfoldMarkdownLinks(enc) == orig
+}
+
+type xmlCdataWrapper struct{}
+
+func (w *xmlCdataWrapper) ID() string           { return "xml-cdata" }
+func (w *xmlCdataWrapper) Detect(s string) bool { return textnorm.HasCDATA(s) }
+func (w *xmlCdataWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.UnwrapCDATA(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *xmlCdataWrapper) Encode(s string) (string, error) {
+	return textnorm.UnwrapCDATA(s), nil
+}
+func (w *xmlCdataWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("xml-cdata unwrap is value-lossless; original wrapper is not reproducible")
+}
+func (w *xmlCdataWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnwrapCDATA(orig) == enc
+}
+
+type headerNormWrapper struct{}
+
+func (w *headerNormWrapper) ID() string           { return "header-norm" }
+func (w *headerNormWrapper) Detect(s string) bool { return textnorm.HasLooseHeaders(s) }
+func (w *headerNormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.NormalizeHeaders(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *headerNormWrapper) Encode(s string) (string, error) {
+	return textnorm.NormalizeHeaders(s), nil
+}
+func (w *headerNormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("header-norm canonicalizes case-insensitive names")
+}
+func (w *headerNormWrapper) Verify(orig, enc string) bool {
+	return textnorm.NormalizeHeaders(orig) == enc
+}
+
 type unicodeUnescapeWrapper struct{}
 
-func (w *unicodeUnescapeWrapper) ID() string           { return "unicode-unescape" }
-func (w *unicodeUnescapeWrapper) Detect(s string) bool { return textnorm.HasUnicodeEscapes(s) }
+func (w *unicodeUnescapeWrapper) ID() string { return "unicode-unescape" }
+func (w *unicodeUnescapeWrapper) Detect(s string) bool {
+	return textnorm.HasUnicodeEscapes(s) || textnorm.HasHexEscapes(s)
+}
 func (w *unicodeUnescapeWrapper) EstimateSavings(s string) int {
 	if !w.Detect(s) {
 		return -1
 	}
-	enc := textnorm.UnfoldUnicode(s)
+	enc := textnorm.UnfoldHexEscapes(textnorm.UnfoldUnicode(s))
 	saving := tokenizer.Count(s) - tokenizer.Count(enc)
 	if saving <= 0 {
 		return -1
@@ -441,13 +723,13 @@ func (w *unicodeUnescapeWrapper) EstimateSavings(s string) int {
 	return saving
 }
 func (w *unicodeUnescapeWrapper) Encode(s string) (string, error) {
-	return textnorm.UnfoldUnicode(s), nil
+	return textnorm.UnfoldHexEscapes(textnorm.UnfoldUnicode(s)), nil
 }
 func (w *unicodeUnescapeWrapper) Decode(s string) (string, error) {
 	return s, fmt.Errorf("unicode-unescape is value-lossless; re-escaping is lossy by design")
 }
 func (w *unicodeUnescapeWrapper) Verify(orig, enc string) bool {
-	return textnorm.UnfoldUnicode(orig) == enc
+	return textnorm.UnfoldHexEscapes(textnorm.UnfoldUnicode(orig)) == enc
 }
 
 type uuidCompactWrapper struct{}
@@ -600,13 +882,15 @@ func (w *textNormWrapper) Verify(orig, enc string) bool {
 
 type htmlEntityWrapper struct{}
 
-func (w *htmlEntityWrapper) ID() string           { return "html-entity" }
-func (w *htmlEntityWrapper) Detect(s string) bool { return textnorm.HasHTMLEntities(s) }
+func (w *htmlEntityWrapper) ID() string { return "html-entity" }
+func (w *htmlEntityWrapper) Detect(s string) bool {
+	return textnorm.HasHTMLEntities(s) || textnorm.HasDeepEntities(s)
+}
 func (w *htmlEntityWrapper) EstimateSavings(s string) int {
 	if !w.Detect(s) {
 		return -1
 	}
-	enc := textnorm.UnescapeEntities(s)
+	enc := textnorm.DeepUnescapeEntities(s)
 	saving := tokenizer.Count(s) - tokenizer.Count(enc)
 	if saving <= 0 {
 		return -1
@@ -614,24 +898,26 @@ func (w *htmlEntityWrapper) EstimateSavings(s string) int {
 	return saving
 }
 func (w *htmlEntityWrapper) Encode(s string) (string, error) {
-	return textnorm.UnescapeEntities(s), nil
+	return textnorm.DeepUnescapeEntities(s), nil
 }
 func (w *htmlEntityWrapper) Decode(s string) (string, error) {
 	return s, fmt.Errorf("html-entity decode is display-lossless")
 }
 func (w *htmlEntityWrapper) Verify(orig, enc string) bool {
-	return textnorm.UnescapeEntities(orig) == enc
+	return textnorm.DeepUnescapeEntities(orig) == enc
 }
 
 type base64CompactWrapper struct{}
 
-func (w *base64CompactWrapper) ID() string           { return "base64-compact" }
-func (w *base64CompactWrapper) Detect(s string) bool { return textnorm.HasCompactableBase64(s) }
+func (w *base64CompactWrapper) ID() string { return "base64-compact" }
+func (w *base64CompactWrapper) Detect(s string) bool {
+	return textnorm.HasCompactableBase64(s) || textnorm.HasCompactableBase32(s)
+}
 func (w *base64CompactWrapper) EstimateSavings(s string) int {
 	if !w.Detect(s) {
 		return -1
 	}
-	enc := textnorm.CompactBase64(s)
+	enc := textnorm.CompactBase32(textnorm.CompactBase64(s))
 	saving := tokenizer.Count(s) - tokenizer.Count(enc)
 	if saving <= 0 {
 		return -1
@@ -639,13 +925,13 @@ func (w *base64CompactWrapper) EstimateSavings(s string) int {
 	return saving
 }
 func (w *base64CompactWrapper) Encode(s string) (string, error) {
-	return textnorm.CompactBase64(s), nil
+	return textnorm.CompactBase32(textnorm.CompactBase64(s)), nil
 }
 func (w *base64CompactWrapper) Decode(enc string) (string, error) {
 	return enc, fmt.Errorf("base64-compact only removes decoder-ignored whitespace")
 }
 func (w *base64CompactWrapper) Verify(orig, enc string) bool {
-	return textnorm.CompactBase64(orig) == enc
+	return textnorm.CompactBase32(textnorm.CompactBase64(orig)) == enc
 }
 
 func newRewriteCmd() *cobra.Command {

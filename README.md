@@ -170,6 +170,16 @@ fall back to the original bytes.
 | unicode-unescape | `unicode-unescape` | ✅ | Unfolds `\uXXXX` JSON escape runs into the characters they encode (surrogate pairs included) — per RFC 8259 both forms are the identical string, but escaped Cyrillic/CJK costs up to 3.6× more tokens |
 | uuid-compact | `uuid-compact` | ✅ | Strips presentation dashes from canonical UUIDs (byte-exact re-dash round-trip) |
 | smart-punct | `smart-punct` | ✅ | Normalizes typographic quote and ellipsis artifacts to ASCII; Cyrillic guillemets and the em dash are preserved as grammar |
+| mojibake-fix | `mojibake-fix` | ✅ | Repairs UTF-8-read-as-Windows-1252 sequences (`â€™` → `'`) with an explicit bounded table |
+| idn-decode | `idn-decode` | ✅ | Unfolds `xn--` Punycode labels (RFC 3492) into their Unicode domain form |
+| ipv6-norm | `ipv6-norm` | ✅ | Canonicalizes IPv6 addresses per RFC 5952 (lowercase, no leading zeros, maximal `::`) |
+| csv-unquote | `csv-unquote` | ✅ | Re-emits over-quoted CSV with minimal RFC 4180 quoting; field values byte-identical |
+| sql-minify | `sql-minify` | ✅ | Collapses code whitespace via a string/comment/dollar-quote-aware lexer; literals and comments untouched |
+| iso-norm | `iso-norm` | ✅ | Canonicalizes explicit-zone RFC 3339 timestamps to one UTC form (same instant) |
+| epoch-to-iso | `epoch-to-iso` | ✅ | Converts standalone epoch numbers (2010–2033 window) to readable UTC ISO timestamps |
+| md-link-ref | `md-link-ref` | ✅ | Repeated inline markdown links become reference definitions with byte-exact unfold |
+| xml-cdata | `xml-cdata` | ✅ | Unwraps `<![CDATA[…]]>` sections into the text they carry |
+| header-norm | `header-norm` | ✅ | Canonicalizes known HTTP header names (case-insensitive per HTTP/1.1) and trims value whitespace |
 | hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens (`de ad be ef` → `deadbeef`) — identical digits, fewer tokens |
 | prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |

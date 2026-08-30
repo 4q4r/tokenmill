@@ -35,6 +35,16 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"unicode-unescape":    "unicode-unescape",
 		"uuid-compact":        "uuid-compact",
 		"smart-punct":         "smart-punct",
+		"mojibake-fix":        "mojibake-fix",
+		"idn-decode":          "idn-decode",
+		"ipv6-norm":           "ipv6-norm",
+		"csv-unquote":         "csv-unquote",
+		"sql-minify":          "sql-minify",
+		"iso-norm":            "iso-norm",
+		"epoch-to-iso":        "epoch-to-iso",
+		"md-link-ref":         "md-link-ref",
+		"header-norm":         "header-norm",
+		"xml-cdata":           "xml-cdata",
 	}
 	wantAliases := map[string][]string{
 		"stacktrace-dict": {"stacktrace"},

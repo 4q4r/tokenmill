@@ -58,22 +58,45 @@ func CompactBase64(s string) string {
 	return compactedOnce(s)
 }
 
-func compactedOnce(s string) string {
-	if !strings.ContainsAny(s, " \t\r\n") {
-		return s
-	}
+// stripRunWhitespace removes space, tab, CR, and LF bytes from run.
+func stripRunWhitespace(run string) string {
+	return strings.Map(func(r rune) rune {
+		if isWhitespaceRune(r) {
+			return -1
+		}
+		return r
+	}, run)
+}
+
+// rewriteEncodedRuns applies rewrite to every candidate run located by
+// pattern, threading the untouched tail between runs back into the output.
+func rewriteEncodedRuns(s string, pattern *regexp.Regexp, rewrite func(run string) string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	for {
-		loc := base64Run.FindStringIndex(s)
+		loc := pattern.FindStringIndex(s)
 		if loc == nil {
 			b.WriteString(s)
 			return b.String()
 		}
-		runStart, runEnd := loc[0], loc[1]
-		// Shrink the match to its base64-only core so surrounding prose,
-		// punctuation, and single spaces between words survive untouched.
-		run := s[runStart:runEnd]
+		start, end := loc[0], loc[1]
+		rewritten := rewrite(s[start:end])
+		if rewritten == s[start:end] {
+			b.WriteString(s[:end])
+			s = s[end:]
+			continue
+		}
+		b.WriteString(s[:start])
+		b.WriteString(rewritten)
+		s = s[end:]
+	}
+}
+
+func compactedOnce(s string) string {
+	if !strings.ContainsAny(s, " \t\r\n") {
+		return s
+	}
+	return rewriteEncodedRuns(s, base64Run, func(run string) string {
 		start := 0
 		for start < len(run) && isWhitespaceRune(rune(run[start])) {
 			start++
@@ -84,16 +107,8 @@ func compactedOnce(s string) string {
 		}
 		core := run[start:end]
 		_, compactedRun := compactRun(core)
-		if compactedRun == core {
-			// Nothing would change inside this run; skip past it.
-			b.WriteString(s[:runEnd])
-			s = s[runEnd:]
-			continue
-		}
-		b.WriteString(s[:runStart])
-		b.WriteString(compactedRun)
-		s = s[runEnd:]
-	}
+		return compactedRun
+	})
 }
 
 // compactRun strips whitespace from one candidate run when — and only when —
@@ -104,12 +119,7 @@ func compactRun(run string) (decoded []byte, compacted string) {
 	if !okOriginal {
 		return nil, run
 	}
-	stripped := strings.Map(func(r rune) rune {
-		if isWhitespaceRune(r) {
-			return -1
-		}
-		return r
-	}, run)
+	stripped := stripRunWhitespace(run)
 	if stripped == run {
 		return original, run
 	}
