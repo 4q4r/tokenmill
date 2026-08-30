@@ -65,7 +65,7 @@ flowchart TB
     Writer --> Corpus["corpus.jsonl\n0600, redacted"] --> T
     Out --> Model["LLM request"]
     Out --> Stats["tracking.db\ntokens saved"] --> Gain["tokenmill gain"]
-    Plugin["OpenCode plugin\nstable prefix + cache scope"] --> Model
+    Plugin["OpenCode plugin\nstable prefix"] --> Model
 ```
 
 Request flow:
@@ -114,7 +114,7 @@ tokenmill/
 │   ├── stats/                    tracking.db (savings history)
 │   └── config/                   single-source configuration
 ├── plugin/
-│   ├── tokenmill.ts              OpenCode plugin: stable prefix, cache scopes
+│   ├── tokenmill.ts              OpenCode plugin: stable prefix stabilization
 │   ├── tokenmill.test.ts         plugin test suite (Bun)
 │   └── tui/tokenmill-stats.tsx   OpenCode TUI savings widget (SolidJS)
 ├── testdata/                     source-format fixtures (chat archives)
@@ -131,8 +131,8 @@ tokenmill/
 | `corpus` | Read-only import of OpenCode/Claude/Codex stores — streamed per session so peak memory tracks the largest session, not the store — with redaction, quarantine, and all-or-nothing atomic publication |
 | `codec` + `tournament` | 17 lossless codecs and the per-payload selection tournament with verification gates |
 | `tokenizer` | Accurate `o200k_base` token counting, savings math, memoized counter |
-| `cache` | Provider-neutral prompt-cache metadata: model-family detection, breakpoint planning (Anthropic-style explicit markers; implicit for OpenAI/Google), stable prefixes, cache scope keys |
-| `plugin/tokenmill.ts` | OpenCode plugin: keeps the conversation's stable prefix untouched and computes cache scopes per tool schema |
+| `cache` | Provider-neutral prompt-cache metadata: model-family detection, breakpoint planning (Anthropic-style explicit markers; implicit for OpenAI/Google), stable prefixes |
+| `plugin/tokenmill.ts` | OpenCode plugin: keeps the conversation's stable prefix untouched so provider prompt caches stay warm |
 | `stats` | SQLite tracking of every rewrite: tokens in/out, saved, percentage |
 | `config` | One configuration source (`tokenmill.jsonc`) mirrored across CLI and plugin |
 

@@ -2,14 +2,12 @@ import type { Plugin } from "@opencode-ai/plugin"
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const ISO_TIMESTAMP =
-  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)$/
+  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/
 const CLOCK_TIME = /^\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const REQUEST_ID_VALUE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
 const DATE_KEYS = new Set(["date", "time", "timestamp", "createdat", "updatedat"])
 const REQUEST_ID_KEYS = new Set(["requestid", "correlationid", "traceid", "spanid", "uuid"])
-const FNV_OFFSET = 0xcbf29ce484222325n
-const FNV_PRIME = 0x100000001b3n
 
 export type StablePrefixResult = {
   content: string
@@ -26,10 +24,6 @@ export type StableSystemResult = {
 type LineRecord = {
   text: string
   ending: string
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
 
 function unchangedPrefixResult(content: string): StablePrefixResult {
@@ -141,128 +135,6 @@ function stabilizeSystemBlocks(blocks: readonly string[]): StableSystemResult {
   return { blocks: reordered, changed, movedBlocks }
 }
 
-/** A bounded, deterministic fallback fingerprint. Callers must still compare full content. */
-function boundedFallbackHash(content: string): string {
-  let hash = FNV_OFFSET
-  for (const character of content) {
-    hash ^= BigInt(character.codePointAt(0) ?? 0)
-    hash = BigInt.asUintN(64, hash * FNV_PRIME)
-  }
-  hash ^= BigInt(content.length)
-  return `fallback-${BigInt.asUintN(64, hash).toString(16).padStart(16, "0")}`
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
-}
-
-function debugEnabled(): boolean {
-  return Boolean(process.env.TOKENMILL_DEBUG)
-}
-
-/** Prefer cryptographic SHA-256; the bounded fingerprint is only a last-resort scope hint. */
-async function hashContent(content: string): Promise<string> {
-  const subtle = globalThis.crypto?.subtle
-  if (subtle && typeof subtle.digest === "function" && typeof TextEncoder !== "undefined") {
-    try {
-      const digest = await subtle.digest("SHA-256", new TextEncoder().encode(content))
-      return bytesToHex(new Uint8Array(digest))
-    } catch (error) {
-      if (debugEnabled()) console.debug("[tokenmill] Web Crypto SHA-256 unavailable; trying native SHA-256", error)
-    }
-  }
-
-  try {
-    const { createHash } = await import("node:crypto")
-    return createHash("sha256").update(content, "utf8").digest("hex")
-  } catch (error) {
-    if (debugEnabled()) console.debug("[tokenmill] native SHA-256 unavailable; using bounded fallback", error)
-  }
-
-  return boundedFallbackHash(content)
-}
-
-/** Serialize JSON-like tool schemas with sorted object keys for deterministic scope keys. */
-function stableSerialize(value: unknown): string {
-  const ancestors = new WeakSet<object>()
-
-  const serialize = (current: unknown): string => {
-    if (current === null) return "null"
-    if (typeof current === "string") return JSON.stringify(current)
-    if (typeof current === "boolean") return current ? "true" : "false"
-    if (typeof current === "number") {
-      return Number.isFinite(current) ? String(current) : `number:${String(current)}`
-    }
-    if (typeof current === "bigint") return `bigint:${current.toString()}`
-    if (typeof current === "undefined") return "undefined"
-    if (typeof current === "function") return "function"
-    if (typeof current === "symbol") return `symbol:${String(current)}`
-    if (!isRecord(current)) return String(current)
-    if (ancestors.has(current)) return '"[Circular]"'
-
-    ancestors.add(current)
-    let result: string
-    if (Array.isArray(current)) {
-      result = `[${current.map(serialize).join(",")}]`
-    } else {
-      result = `{${Object.keys(current)
-        .sort()
-        .map((key) => `${JSON.stringify(key)}:${serialize(current[key])}`)
-        .join(",")}}`
-    }
-    ancestors.delete(current)
-    return result
-  }
-
-  return serialize(value)
-}
-
-function normalizeScopePart(value: unknown): string {
-  const text = typeof value === "string" ? value.trim().toLowerCase() : String(value ?? "unknown")
-  return text.replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "unknown"
-}
-
-/** Build a provider-neutral scope from a tool name and a canonicalized schema. */
-async function createToolSchemaCacheScope(tool: unknown, schema?: unknown): Promise<string> {
-  const toolName = normalizeScopePart(tool)
-  const schemaHash = await hashContent(stableSerialize(schema))
-  return `tokenmill:tool:${toolName}:schema:${schemaHash}`
-}
-
-/** Create metadata values without translating them into a provider-specific request. */
-function createCacheMetadata(scope: string): Record<string, unknown> {
-  return {
-    cache_control: { type: "ephemeral" },
-    prompt_cache_key: scope,
-  }
-}
-
-/** Expose cache fields only when explicitly enabled and only through output.metadata. */
-function applyCacheMetadata(
-  output: unknown,
-  metadata: Record<string, unknown>,
-  enabled: boolean,
-): boolean {
-  if (!enabled || !isRecord(output) || !isRecord(metadata)) return false
-  if (!("metadata" in output)) return false
-
-  let target = output.metadata
-  if (target === undefined) {
-    target = {}
-    output.metadata = target
-  }
-  if (!isRecord(target) || Array.isArray(target)) return false
-
-  for (const [key, value] of Object.entries(metadata)) {
-    if (!(key in target)) target[key] = value
-  }
-  return true
-}
-
-function isCacheMetadataEnabled(value: unknown = process.env.TOKENMILL_CACHE_METADATA): boolean {
-  return typeof value === "string" && /^(?:1|true|yes|on)$/i.test(value.trim())
-}
-
 function isTokenMillEnabled(value: unknown = process.env.TOKENMILL_ENABLED): boolean {
   if (typeof value !== "string" || value.trim() === "") return true
   if (/^(?:0|false|no|off)$/i.test(value.trim())) return false
@@ -287,30 +159,7 @@ const tokenmillPlugin: Plugin = async ({ $ }) => {
     return {}
   }
 
-  // No model-facing ref is emitted: tokenmill_expand is not registered, so replacing content
-  // would be lossy for the model. Avoid retaining output content when no dedup path is active.
-  const cacheMetadataEnabled = isCacheMetadataEnabled()
-  const toolSchemas = new Map<string, unknown>()
-
   return {
-    // The verified definition hook supplies the schema used for the optional cache scope.
-    "tool.definition": async (input, output) => {
-      try {
-        if (cacheMetadataEnabled) toolSchemas.set(normalizeScopePart(input.toolID), output.parameters)
-      } catch (error) {
-        reportHookFailure("tool.definition", error)
-      }
-    },
-    "tool.execute.after": async (input, output) => {
-      try {
-        if (!cacheMetadataEnabled) return
-
-        const scope = await createToolSchemaCacheScope(input.tool, toolSchemas.get(normalizeScopePart(input.tool)))
-        applyCacheMetadata(output, createCacheMetadata(scope), true)
-      } catch (error) {
-        reportHookFailure("tool.execute.after", error)
-      }
-    },
     "experimental.chat.system.transform": async (_input, output) => {
       try {
         const stable = stabilizeSystemBlocks(output.system)
@@ -340,13 +189,6 @@ export const TokenMillPlugin = Object.assign(tokenmillPlugin, {
     isStandaloneMetadataLine,
     moveStablePrefixMetadata,
     stabilizeSystemBlocks,
-    boundedFallbackHash,
-    hashContent,
-    stableSerialize,
-    createToolSchemaCacheScope,
-    createCacheMetadata,
-    applyCacheMetadata,
-    isCacheMetadataEnabled,
     isTokenMillEnabled,
   },
 })

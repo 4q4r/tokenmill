@@ -156,8 +156,8 @@ func TestInit_AtomicTempRename(t *testing.T) {
 	if !strings.Contains(string(pdata), "TokenMillPlugin") {
 		t.Fatalf("plugin missing TokenMillPlugin export")
 	}
-	if !strings.Contains(string(pdata), `tool.execute.after`) {
-		t.Fatalf("plugin missing tool.execute.after")
+	if strings.Contains(string(pdata), `tool.execute.after`) {
+		t.Fatalf("plugin must not register tool.execute.after (cache metadata removed)")
 	}
 	if !strings.Contains(string(pdata), `experimental.chat.system.transform`) {
 		t.Fatalf("plugin missing system.transform")
