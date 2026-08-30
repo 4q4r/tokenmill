@@ -451,8 +451,148 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.HeaderNorm {
 		pool = append(pool, &headerNormWrapper{})
 	}
+	if cfg.Techniques.NfkcFold {
+		pool = append(pool, &nfkcFoldWrapper{})
+	}
+	if cfg.Techniques.TrailingWs {
+		pool = append(pool, &trailingWsWrapper{})
+	}
+	if cfg.Techniques.BlankRun {
+		pool = append(pool, &blankRunWrapper{})
+	}
+	if cfg.Techniques.ColorCompact {
+		pool = append(pool, &colorCompactWrapper{})
+	}
+	if cfg.Techniques.XmlMinify {
+		pool = append(pool, &xmlMinifyWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+type nfkcFoldWrapper struct{}
+
+func (w *nfkcFoldWrapper) ID() string           { return "nfkc-fold" }
+func (w *nfkcFoldWrapper) Detect(s string) bool { return textnorm.HasCompatibilityForms(s) }
+func (w *nfkcFoldWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.FoldCompatibility(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *nfkcFoldWrapper) Encode(s string) (string, error) {
+	return textnorm.FoldCompatibility(s), nil
+}
+func (w *nfkcFoldWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("nfkc-fold is display-lossless; compatibility forms are not recoverable")
+}
+func (w *nfkcFoldWrapper) Verify(orig, enc string) bool {
+	return textnorm.FoldCompatibility(orig) == enc
+}
+
+type trailingWsWrapper struct{}
+
+func (w *trailingWsWrapper) ID() string           { return "trailing-ws" }
+func (w *trailingWsWrapper) Detect(s string) bool { return textnorm.HasTrailingWhitespace(s) }
+func (w *trailingWsWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.StripTrailingWhitespace(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *trailingWsWrapper) Encode(s string) (string, error) {
+	return textnorm.StripTrailingWhitespace(s), nil
+}
+func (w *trailingWsWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("trailing-ws strips invisible whitespace; no decode")
+}
+func (w *trailingWsWrapper) Verify(orig, enc string) bool {
+	return textnorm.StripTrailingWhitespace(orig) == enc
+}
+
+type blankRunWrapper struct{}
+
+func (w *blankRunWrapper) ID() string           { return "blank-run" }
+func (w *blankRunWrapper) Detect(s string) bool { return textnorm.HasBlankRuns(s) }
+func (w *blankRunWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CollapseBlankRuns(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *blankRunWrapper) Encode(s string) (string, error) {
+	return textnorm.CollapseBlankRuns(s), nil
+}
+func (w *blankRunWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("blank-run collapses invisible separators; no decode")
+}
+func (w *blankRunWrapper) Verify(orig, enc string) bool {
+	return textnorm.CollapseBlankRuns(orig) == enc
+}
+
+type colorCompactWrapper struct{}
+
+func (w *colorCompactWrapper) ID() string           { return "color-compact" }
+func (w *colorCompactWrapper) Detect(s string) bool { return textnorm.HasCompactableColors(s) }
+func (w *colorCompactWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CompactHexColors(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *colorCompactWrapper) Encode(s string) (string, error) {
+	return textnorm.CompactHexColors(s), nil
+}
+func (w *colorCompactWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("color-compact is display-lossless; expanded form is not recoverable")
+}
+func (w *colorCompactWrapper) Verify(orig, enc string) bool {
+	return textnorm.CompactHexColors(orig) == enc
+}
+
+type xmlMinifyWrapper struct{}
+
+func (w *xmlMinifyWrapper) ID() string           { return "xml-minify" }
+func (w *xmlMinifyWrapper) Detect(s string) bool { return textnorm.HasMinifiableXML(s) }
+func (w *xmlMinifyWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.MinifyXML(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *xmlMinifyWrapper) Encode(s string) (string, error) {
+	return textnorm.MinifyXML(s), nil
+}
+func (w *xmlMinifyWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("xml-minify collapses insignificant indentation; no byte decode")
+}
+func (w *xmlMinifyWrapper) Verify(orig, enc string) bool {
+	return textnorm.MinifyXML(orig) == enc
 }
 
 type mojibakeFixWrapper struct{}

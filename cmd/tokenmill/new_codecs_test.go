@@ -131,6 +131,11 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"md-link-ref":         {},
 		"xml-cdata":           {},
 		"header-norm":         {},
+		"nfkc-fold":           {},
+		"trailing-ws":         {},
+		"blank-run":           {},
+		"color-compact":       {},
+		"xml-minify":          {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -193,6 +198,11 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.MdLinkRef = false
 	cfg.Techniques.XmlCdata = false
 	cfg.Techniques.HeaderNorm = false
+	cfg.Techniques.NfkcFold = false
+	cfg.Techniques.TrailingWs = false
+	cfg.Techniques.BlankRun = false
+	cfg.Techniques.ColorCompact = false
+	cfg.Techniques.XmlMinify = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)

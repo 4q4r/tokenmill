@@ -218,7 +218,30 @@ func collapseSQLWhitespace(segment string, _ [][2]int) string {
 	return b.String()
 }
 
-// mdLink matches an inline markdown link or image.
+// xmlTagGap matches whitespace runs containing a newline between two tags —
+// formatting indentation, not inline text.
+var xmlTagGap = regexp.MustCompile(`>[ \t]*\n\s*<`)
+
+// HasMinifiableXML reports whether the text contains newline indentation
+// between XML tags.
+func HasMinifiableXML(s string) bool {
+	if !strings.Contains(s, "><") && !strings.Contains(s, ">") {
+		return false
+	}
+	return xmlTagGap.MatchString(s)
+}
+
+// MinifyXML collapses newline indentation between XML tags into adjacent
+// tags. Indentation between tags is insignificant in XML — parsers deliver
+// only character data to applications — so the document value is unchanged.
+// Inline text separated by single spaces is never matched.
+func MinifyXML(s string) string {
+	if !strings.Contains(s, "\n") {
+		return s
+	}
+	return xmlTagGap.ReplaceAllString(s, "><")
+}
+
 var mdLink = regexp.MustCompile(`(!?)\[([^\]\[]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)`)
 
 // mdFence splits text into fenced and code-free segments so link rewriting

@@ -180,6 +180,11 @@ fall back to the original bytes.
 | md-link-ref | `md-link-ref` | ✅ | Repeated inline markdown links become reference definitions with byte-exact unfold |
 | xml-cdata | `xml-cdata` | ✅ | Unwraps `<![CDATA[…]]>` sections into the text they carry |
 | header-norm | `header-norm` | ✅ | Canonicalizes known HTTP header names (case-insensitive per HTTP/1.1) and trims value whitespace |
+| nfkc-fold | `nfkc-fold` | ✅ | Folds compatibility code points via NFKC: fullwidth ＡＢＣ → ABC, ligatures ﬁ → fi, circled ① → 1; CJK typography preserved |
+| trailing-ws | `trailing-ws` | ✅ | Strips single trailing spaces/tabs per line; Markdown hard breaks (2+ spaces) preserved |
+| blank-run | `blank-run` | ✅ | Collapses runs of blank lines into one blank line |
+| color-compact | `color-compact` | ✅ | Collapses hex colors with repeating pairs (#AABBCC → #abc) — CSS renders both identically |
+| xml-minify | `xml-minify` | ✅ | Collapses newline indentation between XML tags; inline text spaces never matched |
 | hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens (`de ad be ef` → `deadbeef`) — identical digits, fewer tokens |
 | prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |

@@ -112,6 +112,11 @@ type Techniques struct {
 	MdLinkRef          bool           `json:"mdLinkRef" mapstructure:"mdLinkRef"`
 	XmlCdata           bool           `json:"xmlCdata" mapstructure:"xmlCdata"`
 	HeaderNorm         bool           `json:"headerNorm" mapstructure:"headerNorm"`
+	NfkcFold           bool           `json:"nfkcFold" mapstructure:"nfkcFold"`
+	TrailingWs         bool           `json:"trailingWs" mapstructure:"trailingWs"`
+	BlankRun           bool           `json:"blankRun" mapstructure:"blankRun"`
+	ColorCompact       bool           `json:"colorCompact" mapstructure:"colorCompact"`
+	XmlMinify          bool           `json:"xmlMinify" mapstructure:"xmlMinify"`
 }
 
 type ExactRLE struct {
@@ -232,6 +237,11 @@ func DefaultConfig() Config {
 			MdLinkRef:          true,
 			XmlCdata:           true,
 			HeaderNorm:         true,
+			NfkcFold:           true,
+			TrailingWs:         true,
+			BlankRun:           true,
+			ColorCompact:       true,
+			XmlMinify:          true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

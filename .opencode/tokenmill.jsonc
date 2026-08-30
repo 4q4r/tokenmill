@@ -64,7 +64,12 @@
     "epochToIso": true,
     "mdLinkRef": true,
     "xmlCdata": true,
-    "headerNorm": true
+    "headerNorm": true,
+    "nfkcFold": true,
+    "trailingWs": true,
+    "blankRun": true,
+    "colorCompact": true,
+    "xmlMinify": true
   },
   "experimental": {
     "gcfGraph": false,

@@ -44,6 +44,11 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"epoch-to-iso":        "epoch-to-iso",
 		"md-link-ref":         "md-link-ref",
 		"header-norm":         "header-norm",
+		"nfkc-fold":           "nfkc-fold",
+		"trailing-ws":         "trailing-ws",
+		"blank-run":           "blank-run",
+		"color-compact":       "color-compact",
+		"xml-minify":          "xml-minify",
 		"xml-cdata":           "xml-cdata",
 	}
 	wantAliases := map[string][]string{

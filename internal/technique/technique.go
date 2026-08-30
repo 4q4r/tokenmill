@@ -11,8 +11,10 @@ type Definition struct {
 var definitions = []Definition{
 	{ID: "ansi", CodecID: "ansi-strip"},
 	{ID: "base64-compact", CodecID: "base64-compact"},
+	{ID: "blank-run", CodecID: "blank-run"},
 	{ID: "block", CodecID: "block-factor"},
 	{ID: "block-pack", CodecID: "block-pack"},
+	{ID: "color-compact", CodecID: "color-compact"},
 	{ID: "cr", CodecID: "cr-render"},
 	{ID: "csv-canonical", CodecID: "csv-canonical"},
 	{ID: "csv-unquote", CodecID: "csv-unquote"},
@@ -32,6 +34,7 @@ var definitions = []Definition{
 	{ID: "markdown-whitespace", CodecID: "markdown-whitespace"},
 	{ID: "md-link-ref", CodecID: "md-link-ref"},
 	{ID: "mojibake-fix", CodecID: "mojibake-fix"},
+	{ID: "nfkc-fold", CodecID: "nfkc-fold"},
 	{ID: "opaque-dict", CodecID: "opaque-dict"},
 	{ID: "path-dict", CodecID: "path-dict"},
 	{ID: "prefix-fold", CodecID: "prefix-fold"},
@@ -42,10 +45,12 @@ var definitions = []Definition{
 	{ID: "symbol-table", CodecID: "symbol-table"},
 	{ID: "table-tsv", CodecID: "table-tsv"},
 	{ID: "text-norm", CodecID: "text-norm"},
+	{ID: "trailing-ws", CodecID: "trailing-ws"},
 	{ID: "unicode-unescape", CodecID: "unicode-unescape"},
 	{ID: "url-decode", CodecID: "url-decode"},
 	{ID: "uuid-compact", CodecID: "uuid-compact"},
 	{ID: "xml-cdata", CodecID: "xml-cdata"},
+	{ID: "xml-minify", CodecID: "xml-minify"},
 }
 
 var names = buildNames()
