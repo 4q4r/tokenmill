@@ -96,6 +96,9 @@ type Techniques struct {
 	UnicodeNormalize   bool           `json:"unicodeNormalize" mapstructure:"unicodeNormalize"`
 	HtmlEntityDecode   bool           `json:"htmlEntityDecode" mapstructure:"htmlEntityDecode"`
 	Base64Compact      bool           `json:"base64Compact" mapstructure:"base64Compact"`
+	UrlDecode          bool           `json:"urlDecode" mapstructure:"urlDecode"`
+	HexCompact         bool           `json:"hexCompact" mapstructure:"hexCompact"`
+	PrefixFold         bool           `json:"prefixFold" mapstructure:"prefixFold"`
 }
 
 type ExactRLE struct {
@@ -200,6 +203,9 @@ func DefaultConfig() Config {
 			UnicodeNormalize:   true,
 			HtmlEntityDecode:   true,
 			Base64Compact:      true,
+			UrlDecode:          true,
+			HexCompact:         true,
+			PrefixFold:         true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

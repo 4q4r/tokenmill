@@ -166,6 +166,9 @@ fall back to the original bytes.
 | text-norm | `text-norm` | ✅ | Strips invisible Unicode (zero-width, soft hyphens, BOM, bidi/tag/control characters), maps NBSP and exotic spaces to plain space, composes NFC — the copy-paste junk that inflates tokens and destabilizes tokenization |
 | html-entity | `html-entity` | ✅ | Decodes HTML entities (`&amp;` `&lt;` `&#39;`…) into the characters a reader actually sees |
 | base64-compact | `base64-compact` | ✅ | Removes line-wrapping whitespace inside decodable base64 payloads (byte-lossless by spec); undecodable runs are never touched |
+| url-decode | `url-decode` | ✅ | Decodes `%XX` percent-encoding runs (multi-byte UTF-8 aware) into the characters they represent; malformed escapes stay literal |
+| hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens (`de ad be ef` → `deadbeef`) — identical digits, fewer tokens |
+| prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |
 
 The tournament applies a codec only when verified savings clear both gates

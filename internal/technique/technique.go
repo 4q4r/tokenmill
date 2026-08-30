@@ -17,6 +17,7 @@ var definitions = []Definition{
 	{ID: "csv-canonical", CodecID: "csv-canonical"},
 	{ID: "dedup", CodecID: "dedup-sha256"},
 	{ID: "diff-log-fold", CodecID: "diff-log-fold"},
+	{ID: "hex-compact", CodecID: "hex-compact"},
 	{ID: "html-entity", CodecID: "html-entity"},
 	{ID: "jcs", CodecID: "jcs"},
 	{ID: "json-compact", CodecID: "json-compact"},
@@ -25,11 +26,13 @@ var definitions = []Definition{
 	{ID: "markdown-whitespace", CodecID: "markdown-whitespace"},
 	{ID: "opaque-dict", CodecID: "opaque-dict"},
 	{ID: "path-dict", CodecID: "path-dict"},
+	{ID: "prefix-fold", CodecID: "prefix-fold"},
 	{ID: "rle", CodecID: "exact-rle"},
 	{ID: "stacktrace-dict", CodecID: "stacktrace-dict", Aliases: []string{"stacktrace"}},
 	{ID: "symbol-table", CodecID: "symbol-table"},
 	{ID: "table-tsv", CodecID: "table-tsv"},
 	{ID: "text-norm", CodecID: "text-norm"},
+	{ID: "url-decode", CodecID: "url-decode"},
 }
 
 var names = buildNames()

@@ -403,8 +403,92 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.Base64Compact {
 		pool = append(pool, &base64CompactWrapper{})
 	}
+	if cfg.Techniques.UrlDecode {
+		pool = append(pool, &urlDecodeWrapper{})
+	}
+	if cfg.Techniques.HexCompact {
+		pool = append(pool, &hexCompactWrapper{})
+	}
+	if cfg.Techniques.PrefixFold {
+		pool = append(pool, &prefixFoldWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+type urlDecodeWrapper struct{}
+
+func (w *urlDecodeWrapper) ID() string           { return "url-decode" }
+func (w *urlDecodeWrapper) Detect(s string) bool { return textnorm.HasPercentEncodings(s) }
+func (w *urlDecodeWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.DecodePercent(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *urlDecodeWrapper) Encode(s string) (string, error) {
+	return textnorm.DecodePercent(s), nil
+}
+func (w *urlDecodeWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("url-decode is display-lossless")
+}
+func (w *urlDecodeWrapper) Verify(orig, enc string) bool {
+	return textnorm.DecodePercent(orig) == enc
+}
+
+type hexCompactWrapper struct{}
+
+func (w *hexCompactWrapper) ID() string           { return "hex-compact" }
+func (w *hexCompactWrapper) Detect(s string) bool { return textnorm.HasCompactableHex(s) }
+func (w *hexCompactWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CompactHex(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *hexCompactWrapper) Encode(s string) (string, error) {
+	return textnorm.CompactHex(s), nil
+}
+func (w *hexCompactWrapper) Decode(enc string) (string, error) {
+	return enc, fmt.Errorf("hex-compact only removes separator whitespace")
+}
+func (w *hexCompactWrapper) Verify(orig, enc string) bool {
+	return textnorm.CompactHex(orig) == enc
+}
+
+type prefixFoldWrapper struct{}
+
+func (w *prefixFoldWrapper) ID() string           { return "prefix-fold" }
+func (w *prefixFoldWrapper) Detect(s string) bool { return textnorm.FoldLinePrefixes(s, 5, 8).Changed }
+func (w *prefixFoldWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.FoldLinePrefixes(s, 5, 8).Content
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *prefixFoldWrapper) Encode(s string) (string, error) {
+	return textnorm.FoldLinePrefixes(s, 5, 8).Content, nil
+}
+func (w *prefixFoldWrapper) Decode(enc string) (string, error) {
+	return textnorm.UnfoldLinePrefixes(enc), nil
+}
+func (w *prefixFoldWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnfoldLinePrefixes(enc) == orig
 }
 
 type textNormWrapper struct{}

@@ -115,6 +115,9 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"text-norm":           {},
 		"html-entity":         {},
 		"base64-compact":      {},
+		"url-decode":          {},
+		"hex-compact":         {},
+		"prefix-fold":         {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -161,6 +164,9 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.UnicodeNormalize = false
 	cfg.Techniques.HtmlEntityDecode = false
 	cfg.Techniques.Base64Compact = false
+	cfg.Techniques.UrlDecode = false
+	cfg.Techniques.HexCompact = false
+	cfg.Techniques.PrefixFold = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)

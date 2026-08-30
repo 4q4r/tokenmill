@@ -48,7 +48,10 @@
     "diffLogFold": true,
     "unicodeNormalize": true,
     "htmlEntityDecode": true,
-    "base64Compact": true
+    "base64Compact": true,
+    "urlDecode": true,
+    "hexCompact": true,
+    "prefixFold": true
   },
   "experimental": {
     "gcfGraph": false,
