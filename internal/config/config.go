@@ -112,6 +112,12 @@ type Techniques struct {
 	MdLinkRef          bool           `json:"mdLinkRef" mapstructure:"mdLinkRef"`
 	XmlCdata           bool           `json:"xmlCdata" mapstructure:"xmlCdata"`
 	HeaderNorm         bool           `json:"headerNorm" mapstructure:"headerNorm"`
+	UrlCanonical       bool           `json:"urlCanonical" mapstructure:"urlCanonical"`
+	TsCanonical        bool           `json:"tsCanonical" mapstructure:"tsCanonical"`
+	ThousandSep        bool           `json:"thousandSep" mapstructure:"thousandSep"`
+	QuotedPrintable    bool           `json:"quotedPrintable" mapstructure:"quotedPrintable"`
+	BaseNorm           bool           `json:"baseNorm" mapstructure:"baseNorm"`
+	SemverNorm         bool           `json:"semverNorm" mapstructure:"semverNorm"`
 	NfkcFold           bool           `json:"nfkcFold" mapstructure:"nfkcFold"`
 	TrailingWs         bool           `json:"trailingWs" mapstructure:"trailingWs"`
 	BlankRun           bool           `json:"blankRun" mapstructure:"blankRun"`
@@ -239,6 +245,12 @@ func DefaultConfig() Config {
 			MdLinkRef:          true,
 			XmlCdata:           true,
 			HeaderNorm:         true,
+			UrlCanonical:       true,
+			TsCanonical:        true,
+			ThousandSep:        true,
+			QuotedPrintable:    true,
+			BaseNorm:           true,
+			SemverNorm:         true,
 			NfkcFold:           true,
 			TrailingWs:         true,
 			BlankRun:           true,

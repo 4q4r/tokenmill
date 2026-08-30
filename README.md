@@ -188,6 +188,12 @@ fall back to the original bytes.
 | xml-minify | `xml-minify` | ✅ | Collapses newline indentation between XML tags; inline text spaces never matched |
 | range-fold | `range-fold` | ✅ | Consecutive integer runs (`100, 101, 102, 103` → `100..103[, ]`) with byte-exact unfold |
 | hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens and lowercases them (`de AD be EF` → `deadbeef`) — identical digits, fewer tokens |
+| url-canonical | `url-canonical` | ✅ | Lowercases scheme/host, strips default ports, resolves dot-segments, removes tracking params, sorts query |
+| ts-canonical | `ts-canonical` | ✅ | Extends iso-norm: AM/PM → 24h, `(GMT+3)` → `+03:00`, basic ISO → extended, RFC 2822 → ISO |
+| thousand-sep | `thousand-sep` | ✅ | Strips comma/space/thin-space separators from numbers |
+| quoted-printable | `quoted-printable` | ✅ | Decodes `=XX` MIME escape sequences and soft line breaks (byte-exact) |
+| base-norm | `base-norm` | ✅ | Base64url alphabet to standard base64; lowercase base32 to uppercase (same payload) |
+| semver-norm | `semver-norm` | ✅ | Strips leading zeros from v-prefixed semver components (`v01.02.03` → `v1.2.3`) |
 | prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |
 

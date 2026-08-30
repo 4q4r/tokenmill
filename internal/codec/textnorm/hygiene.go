@@ -107,23 +107,40 @@ func FoldCompatibility(s string) string {
 
 // ---------- color compaction ----------
 
-// hexColor6 matches six-digit hex colors, the shorthand candidates.
-var hexColor6 = regexp.MustCompile(`#[0-9a-fA-F]{6}\b`)
+// hexColorAny matches any hex color (3, 4, 6, or 8 digits).
+var hexColorAny = regexp.MustCompile(`#[0-9a-fA-F]{3,8}\b`)
 
-// HasCompactableColors reports whether the text contains expandable hex
-// colors.
+// HasCompactableColors reports whether the text contains expandable or
+// uppercase hex colors.
 func HasCompactableColors(s string) bool {
 	return CompactHexColors(s) != s
 }
 
 // CompactHexColors collapses six-digit hex colors with repeating digit pairs
-// into the three-digit CSS shorthand (#AABBCC → #abc). CSS renders both
-// forms identically; colors without repeating pairs stay untouched.
+// into the three-digit CSS shorthand (#AABBCC → #abc), removes fully opaque
+// alpha channels (#RRGGBBFF → #rrggbb), and lowercases all hex colors. CSS
+// renders all these forms identically; colors without repeating pairs keep
+// their digit content.
 func CompactHexColors(s string) string {
-	return hexColor6.ReplaceAllStringFunc(s, func(color string) string {
-		if color[1] == color[2] && color[3] == color[4] && color[5] == color[6] {
-			return "#" + strings.ToLower(string(color[1])+string(color[3])+string(color[5]))
+	return hexColorAny.ReplaceAllStringFunc(s, func(color string) string {
+		hex := color[1:] // strip '#'
+		switch len(hex) {
+		case 6:
+			if hex[0] == hex[1] && hex[2] == hex[3] && hex[4] == hex[5] {
+				return "#" + strings.ToLower(string(hex[0])+string(hex[2])+string(hex[4]))
+			}
+			return "#" + strings.ToLower(hex)
+		case 8:
+			if hex[6] == 'F' || hex[6] == 'f' {
+				if hex[7] == 'F' || hex[7] == 'f' {
+					return "#" + strings.ToLower(hex[:6])
+				}
+			}
+			return "#" + strings.ToLower(hex)
+		case 3, 4:
+			return "#" + strings.ToLower(hex)
+		default:
+			return color
 		}
-		return color
 	})
 }

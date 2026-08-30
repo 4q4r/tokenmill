@@ -71,6 +71,12 @@
     "colorCompact": true,
     "xmlMinify": true,
     "rangeFold": true,
+    "urlCanonical": true,
+    "tsCanonical": true,
+    "thousandSep": true,
+    "quotedPrintable": true,
+    "baseNorm": true,
+    "semverNorm": true,
     "uuidRemap": true
   },
   "experimental": {

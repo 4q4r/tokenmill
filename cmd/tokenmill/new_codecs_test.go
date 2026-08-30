@@ -132,6 +132,12 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"md-link-ref":         {},
 		"xml-cdata":           {},
 		"header-norm":         {},
+		"url-canonical":       {},
+		"ts-canonical":        {},
+		"thousand-sep":        {},
+		"quoted-printable":    {},
+		"base-norm":           {},
+		"semver-norm":         {},
 		"nfkc-fold":           {},
 		"trailing-ws":         {},
 		"blank-run":           {},
@@ -201,6 +207,12 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.MdLinkRef = false
 	cfg.Techniques.XmlCdata = false
 	cfg.Techniques.HeaderNorm = false
+	cfg.Techniques.UrlCanonical = false
+	cfg.Techniques.TsCanonical = false
+	cfg.Techniques.ThousandSep = false
+	cfg.Techniques.QuotedPrintable = false
+	cfg.Techniques.BaseNorm = false
+	cfg.Techniques.SemverNorm = false
 	cfg.Techniques.NfkcFold = false
 	cfg.Techniques.TrailingWs = false
 	cfg.Techniques.BlankRun = false

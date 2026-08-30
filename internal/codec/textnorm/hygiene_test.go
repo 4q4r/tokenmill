@@ -62,7 +62,7 @@ func TestFoldCompatibility(t *testing.T) {
 
 func TestCompactHexColors(t *testing.T) {
 	input := "color: #AABBCC; border: #aabb00; keep: #AAB; other: #123456"
-	want := "color: #abc; border: #ab0; keep: #AAB; other: #123456"
+	want := "color: #abc; border: #ab0; keep: #aab; other: #123456"
 	if !HasCompactableColors(input) {
 		t.Fatal("HasCompactableColors missed expandable color")
 	}

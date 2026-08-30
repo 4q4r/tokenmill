@@ -475,6 +475,24 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.HeaderNorm {
 		pool = append(pool, &headerNormWrapper{})
 	}
+	if cfg.Techniques.UrlCanonical {
+		pool = append(pool, &urlCanonicalWrapper{})
+	}
+	if cfg.Techniques.TsCanonical {
+		pool = append(pool, &tsCanonicalWrapper{})
+	}
+	if cfg.Techniques.ThousandSep {
+		pool = append(pool, &thousandSepWrapper{})
+	}
+	if cfg.Techniques.QuotedPrintable {
+		pool = append(pool, &quotedPrintableWrapper{})
+	}
+	if cfg.Techniques.BaseNorm {
+		pool = append(pool, &baseNormWrapper{})
+	}
+	if cfg.Techniques.SemverNorm {
+		pool = append(pool, &semverNormWrapper{})
+	}
 	if cfg.Techniques.NfkcFold {
 		pool = append(pool, &nfkcFoldWrapper{})
 	}
@@ -938,6 +956,158 @@ func (w *headerNormWrapper) Decode(s string) (string, error) {
 }
 func (w *headerNormWrapper) Verify(orig, enc string) bool {
 	return textnorm.NormalizeHeaders(orig) == enc
+}
+
+type urlCanonicalWrapper struct{}
+
+func (w *urlCanonicalWrapper) ID() string           { return "url-canonical" }
+func (w *urlCanonicalWrapper) Detect(s string) bool { return textnorm.HasCanonicalizableURL(s) }
+func (w *urlCanonicalWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CanonicalizeURL(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *urlCanonicalWrapper) Encode(s string) (string, error) {
+	return textnorm.CanonicalizeURL(s), nil
+}
+func (w *urlCanonicalWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("url-canonical is normalization; original URL is not recoverable")
+}
+func (w *urlCanonicalWrapper) Verify(orig, enc string) bool {
+	return textnorm.CanonicalizeURL(orig) == enc
+}
+
+type tsCanonicalWrapper struct{}
+
+func (w *tsCanonicalWrapper) ID() string           { return "ts-canonical" }
+func (w *tsCanonicalWrapper) Detect(s string) bool { return textnorm.HasExtendedTimestampForms(s) }
+func (w *tsCanonicalWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CanonicalizeTimestampsExtended(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *tsCanonicalWrapper) Encode(s string) (string, error) {
+	return textnorm.CanonicalizeTimestampsExtended(s), nil
+}
+func (w *tsCanonicalWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("ts-canonical canonicalizes the same instant")
+}
+func (w *tsCanonicalWrapper) Verify(orig, enc string) bool {
+	return textnorm.CanonicalizeTimestampsExtended(orig) == enc
+}
+
+type thousandSepWrapper struct{}
+
+func (w *thousandSepWrapper) ID() string           { return "thousand-sep" }
+func (w *thousandSepWrapper) Detect(s string) bool { return textnorm.HasThousandSeparators(s) }
+func (w *thousandSepWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.StripThousandSeparators(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *thousandSepWrapper) Encode(s string) (string, error) {
+	return textnorm.StripThousandSeparators(s), nil
+}
+func (w *thousandSepWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("thousand-sep strips separators; original formatting not recoverable")
+}
+func (w *thousandSepWrapper) Verify(orig, enc string) bool {
+	return textnorm.StripThousandSeparators(orig) == enc
+}
+
+type quotedPrintableWrapper struct{}
+
+func (w *quotedPrintableWrapper) ID() string           { return "quoted-printable" }
+func (w *quotedPrintableWrapper) Detect(s string) bool { return textnorm.HasQuotedPrintable(s) }
+func (w *quotedPrintableWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.DecodeQuotedPrintable(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *quotedPrintableWrapper) Encode(s string) (string, error) {
+	return textnorm.DecodeQuotedPrintable(s), nil
+}
+func (w *quotedPrintableWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("quoted-printable is byte-exact decode")
+}
+func (w *quotedPrintableWrapper) Verify(orig, enc string) bool {
+	return textnorm.DecodeQuotedPrintable(orig) == enc
+}
+
+type baseNormWrapper struct{}
+
+func (w *baseNormWrapper) ID() string { return "base-norm" }
+func (w *baseNormWrapper) Detect(s string) bool {
+	return textnorm.HasBase64URL(s) || textnorm.HasLowercaseBase32(s)
+}
+func (w *baseNormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.NormalizeBase32Case(textnorm.NormalizeBase64URL(s))
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *baseNormWrapper) Encode(s string) (string, error) {
+	return textnorm.NormalizeBase32Case(textnorm.NormalizeBase64URL(s)), nil
+}
+func (w *baseNormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("base-norm is alphabet normalization; no decode")
+}
+func (w *baseNormWrapper) Verify(orig, enc string) bool {
+	return textnorm.NormalizeBase32Case(textnorm.NormalizeBase64URL(orig)) == enc
+}
+
+type semverNormWrapper struct{}
+
+func (w *semverNormWrapper) ID() string           { return "semver-norm" }
+func (w *semverNormWrapper) Detect(s string) bool { return textnorm.HasNonCanonicalSemver(s) }
+func (w *semverNormWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CanonicalizeSemver(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *semverNormWrapper) Encode(s string) (string, error) {
+	return textnorm.CanonicalizeSemver(s), nil
+}
+func (w *semverNormWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("semver-norm strips leading zeros; original padding not recoverable")
+}
+func (w *semverNormWrapper) Verify(orig, enc string) bool {
+	return textnorm.CanonicalizeSemver(orig) == enc
 }
 
 type unicodeUnescapeWrapper struct{}
