@@ -412,8 +412,92 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.PrefixFold {
 		pool = append(pool, &prefixFoldWrapper{})
 	}
+	if cfg.Techniques.UnicodeUnescape {
+		pool = append(pool, &unicodeUnescapeWrapper{})
+	}
+	if cfg.Techniques.UUIDCompact {
+		pool = append(pool, &uuidCompactWrapper{})
+	}
+	if cfg.Techniques.SmartPunct {
+		pool = append(pool, &smartPunctWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+type unicodeUnescapeWrapper struct{}
+
+func (w *unicodeUnescapeWrapper) ID() string           { return "unicode-unescape" }
+func (w *unicodeUnescapeWrapper) Detect(s string) bool { return textnorm.HasUnicodeEscapes(s) }
+func (w *unicodeUnescapeWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.UnfoldUnicode(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *unicodeUnescapeWrapper) Encode(s string) (string, error) {
+	return textnorm.UnfoldUnicode(s), nil
+}
+func (w *unicodeUnescapeWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("unicode-unescape is value-lossless; re-escaping is lossy by design")
+}
+func (w *unicodeUnescapeWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnfoldUnicode(orig) == enc
+}
+
+type uuidCompactWrapper struct{}
+
+func (w *uuidCompactWrapper) ID() string           { return "uuid-compact" }
+func (w *uuidCompactWrapper) Detect(s string) bool { return textnorm.HasDashedUUIDs(s) }
+func (w *uuidCompactWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.CompactUUIDs(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *uuidCompactWrapper) Encode(s string) (string, error) {
+	return textnorm.CompactUUIDs(s), nil
+}
+func (w *uuidCompactWrapper) Decode(enc string) (string, error) {
+	return textnorm.RedashUUIDs(enc), nil
+}
+func (w *uuidCompactWrapper) Verify(orig, enc string) bool {
+	return textnorm.CompactUUIDs(orig) == enc && textnorm.RedashUUIDs(enc) == orig
+}
+
+type smartPunctWrapper struct{}
+
+func (w *smartPunctWrapper) ID() string           { return "smart-punct" }
+func (w *smartPunctWrapper) Detect(s string) bool { return textnorm.HasSmartPunctuation(s) }
+func (w *smartPunctWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.NormalizeSmartPunctuation(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *smartPunctWrapper) Encode(s string) (string, error) {
+	return textnorm.NormalizeSmartPunctuation(s), nil
+}
+func (w *smartPunctWrapper) Decode(s string) (string, error) {
+	return s, fmt.Errorf("smart-punct is display-lossless, no decode")
+}
+func (w *smartPunctWrapper) Verify(orig, enc string) bool {
+	return textnorm.NormalizeSmartPunctuation(orig) == enc
 }
 
 type urlDecodeWrapper struct{}

@@ -28,11 +28,14 @@ var definitions = []Definition{
 	{ID: "path-dict", CodecID: "path-dict"},
 	{ID: "prefix-fold", CodecID: "prefix-fold"},
 	{ID: "rle", CodecID: "exact-rle"},
+	{ID: "smart-punct", CodecID: "smart-punct"},
 	{ID: "stacktrace-dict", CodecID: "stacktrace-dict", Aliases: []string{"stacktrace"}},
 	{ID: "symbol-table", CodecID: "symbol-table"},
 	{ID: "table-tsv", CodecID: "table-tsv"},
 	{ID: "text-norm", CodecID: "text-norm"},
+	{ID: "unicode-unescape", CodecID: "unicode-unescape"},
 	{ID: "url-decode", CodecID: "url-decode"},
+	{ID: "uuid-compact", CodecID: "uuid-compact"},
 }
 
 var names = buildNames()

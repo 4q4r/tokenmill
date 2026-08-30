@@ -51,7 +51,10 @@
     "base64Compact": true,
     "urlDecode": true,
     "hexCompact": true,
-    "prefixFold": true
+    "prefixFold": true,
+    "unicodeUnescape": true,
+    "uuidCompact": true,
+    "smartPunct": true
   },
   "experimental": {
     "gcfGraph": false,

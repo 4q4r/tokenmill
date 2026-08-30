@@ -32,6 +32,9 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"url-decode":          "url-decode",
 		"hex-compact":         "hex-compact",
 		"prefix-fold":         "prefix-fold",
+		"unicode-unescape":    "unicode-unescape",
+		"uuid-compact":        "uuid-compact",
+		"smart-punct":         "smart-punct",
 	}
 	wantAliases := map[string][]string{
 		"stacktrace-dict": {"stacktrace"},

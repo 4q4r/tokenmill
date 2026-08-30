@@ -99,6 +99,9 @@ type Techniques struct {
 	UrlDecode          bool           `json:"urlDecode" mapstructure:"urlDecode"`
 	HexCompact         bool           `json:"hexCompact" mapstructure:"hexCompact"`
 	PrefixFold         bool           `json:"prefixFold" mapstructure:"prefixFold"`
+	UnicodeUnescape    bool           `json:"unicodeUnescape" mapstructure:"unicodeUnescape"`
+	UUIDCompact        bool           `json:"uuidCompact" mapstructure:"uuidCompact"`
+	SmartPunct         bool           `json:"smartPunct" mapstructure:"smartPunct"`
 }
 
 type ExactRLE struct {
@@ -206,6 +209,9 @@ func DefaultConfig() Config {
 			UrlDecode:          true,
 			HexCompact:         true,
 			PrefixFold:         true,
+			UnicodeUnescape:    true,
+			UUIDCompact:        true,
+			SmartPunct:         true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

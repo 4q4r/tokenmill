@@ -167,6 +167,9 @@ fall back to the original bytes.
 | html-entity | `html-entity` | ✅ | Decodes HTML entities (`&amp;` `&lt;` `&#39;`…) into the characters a reader actually sees |
 | base64-compact | `base64-compact` | ✅ | Removes line-wrapping whitespace inside decodable base64 payloads (byte-lossless by spec); undecodable runs are never touched |
 | url-decode | `url-decode` | ✅ | Decodes `%XX` percent-encoding runs (multi-byte UTF-8 aware) into the characters they represent; malformed escapes stay literal |
+| unicode-unescape | `unicode-unescape` | ✅ | Unfolds `\uXXXX` JSON escape runs into the characters they encode (surrogate pairs included) — per RFC 8259 both forms are the identical string, but escaped Cyrillic/CJK costs up to 3.6× more tokens |
+| uuid-compact | `uuid-compact` | ✅ | Strips presentation dashes from canonical UUIDs (byte-exact re-dash round-trip) |
+| smart-punct | `smart-punct` | ✅ | Normalizes typographic quote and ellipsis artifacts to ASCII; Cyrillic guillemets and the em dash are preserved as grammar |
 | hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens (`de ad be ef` → `deadbeef`) — identical digits, fewer tokens |
 | prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |
