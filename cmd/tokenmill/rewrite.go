@@ -466,8 +466,36 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.XmlMinify {
 		pool = append(pool, &xmlMinifyWrapper{})
 	}
+	if cfg.Techniques.RangeFold {
+		pool = append(pool, &rangeFoldWrapper{})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+type rangeFoldWrapper struct{}
+
+func (w *rangeFoldWrapper) ID() string           { return "range-fold" }
+func (w *rangeFoldWrapper) Detect(s string) bool { return textnorm.HasFoldableRanges(s) }
+func (w *rangeFoldWrapper) EstimateSavings(s string) int {
+	if !w.Detect(s) {
+		return -1
+	}
+	enc := textnorm.FoldRanges(s)
+	saving := tokenizer.Count(s) - tokenizer.Count(enc)
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *rangeFoldWrapper) Encode(s string) (string, error) {
+	return textnorm.FoldRanges(s), nil
+}
+func (w *rangeFoldWrapper) Decode(enc string) (string, error) {
+	return textnorm.UnfoldRanges(enc), nil
+}
+func (w *rangeFoldWrapper) Verify(orig, enc string) bool {
+	return textnorm.UnfoldRanges(enc) == orig
 }
 
 type nfkcFoldWrapper struct{}

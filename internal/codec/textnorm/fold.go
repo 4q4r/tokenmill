@@ -108,10 +108,10 @@ func HasCompactableHex(s string) bool {
 	return compactedHex(s) != s
 }
 
-// CompactHex joins whitespace-separated hex tokens into one continuous hex
-// string. Hexadecimal digits carry the same bytes with or without
-// separators, so joining is byte-lossless; runs are validated token-by-token
-// and prose is never touched.
+// CompactHex joins whitespace-separated hex tokens into one continuous
+// lowercase hex string. Hexadecimal digits carry the same bytes with or
+// without separators or case, so joining is byte-lossless; runs are
+// validated token-by-token and prose is never touched.
 func CompactHex(s string) string {
 	return compactedHex(s)
 }
@@ -142,6 +142,7 @@ func compactedHex(s string) string {
 			s = s[end:]
 			continue
 		}
+		joined = strings.ToLower(joined)
 		b.WriteString(s[:start])
 		b.WriteString(joined)
 		s = s[end:]

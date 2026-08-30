@@ -49,6 +49,7 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"blank-run":           "blank-run",
 		"color-compact":       "color-compact",
 		"xml-minify":          "xml-minify",
+		"range-fold":          "range-fold",
 		"xml-cdata":           "xml-cdata",
 	}
 	wantAliases := map[string][]string{

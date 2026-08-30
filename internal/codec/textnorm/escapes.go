@@ -120,13 +120,13 @@ func HasDashedUUIDs(s string) bool {
 	return canonicalUUID.MatchString(s)
 }
 
-// CompactUUIDs removes the presentation dashes from canonical UUIDs. The
-// hexadecimal digits are the identifier; dashes are fixed-position
-// decoration, so reinserting them at positions 8, 13, 18, and 23 restores
-// the original byte-for-byte.
+// CompactUUIDs removes the presentation dashes from canonical UUIDs and
+// lowercases the hex digits. The hexadecimal digits are the identifier;
+// dashes and case are presentation, so reinserting dashes restores the
+// original spelling byte-for-byte.
 func CompactUUIDs(s string) string {
 	return canonicalUUID.ReplaceAllStringFunc(s, func(uuid string) string {
-		return uuid[:8] + uuid[9:13] + uuid[14:18] + uuid[19:23] + uuid[24:]
+		return strings.ToLower(uuid[:8] + uuid[9:13] + uuid[14:18] + uuid[19:23] + uuid[24:])
 	})
 }
 

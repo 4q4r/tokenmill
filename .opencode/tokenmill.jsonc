@@ -69,7 +69,8 @@
     "trailingWs": true,
     "blankRun": true,
     "colorCompact": true,
-    "xmlMinify": true
+    "xmlMinify": true,
+    "rangeFold": true
   },
   "experimental": {
     "gcfGraph": false,

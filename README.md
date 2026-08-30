@@ -185,7 +185,8 @@ fall back to the original bytes.
 | blank-run | `blank-run` | ✅ | Collapses runs of blank lines into one blank line |
 | color-compact | `color-compact` | ✅ | Collapses hex colors with repeating pairs (#AABBCC → #abc) — CSS renders both identically |
 | xml-minify | `xml-minify` | ✅ | Collapses newline indentation between XML tags; inline text spaces never matched |
-| hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens (`de ad be ef` → `deadbeef`) — identical digits, fewer tokens |
+| range-fold | `range-fold` | ✅ | Consecutive integer runs (`100, 101, 102, 103` → `100..103[, ]`) with byte-exact unfold |
+| hex-compact | `hex-compact` | ✅ | Joins whitespace-separated hex tokens and lowercases them (`de AD be EF` → `deadbeef`) — identical digits, fewer tokens |
 | prefix-fold | `prefix-fold` | ✅ | Folds runs of log lines sharing one identical prefix (timestamp/level) into an explicit envelope line; byte-exact decode restores the original |
 | diff-log-fold | `diff-log-fold` | ❌ | Folds exact adjacent line/block repeats in logs |
 

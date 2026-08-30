@@ -38,6 +38,7 @@ var definitions = []Definition{
 	{ID: "opaque-dict", CodecID: "opaque-dict"},
 	{ID: "path-dict", CodecID: "path-dict"},
 	{ID: "prefix-fold", CodecID: "prefix-fold"},
+	{ID: "range-fold", CodecID: "range-fold"},
 	{ID: "rle", CodecID: "exact-rle"},
 	{ID: "smart-punct", CodecID: "smart-punct"},
 	{ID: "sql-minify", CodecID: "sql-minify"},

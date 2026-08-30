@@ -117,6 +117,7 @@ type Techniques struct {
 	BlankRun           bool           `json:"blankRun" mapstructure:"blankRun"`
 	ColorCompact       bool           `json:"colorCompact" mapstructure:"colorCompact"`
 	XmlMinify          bool           `json:"xmlMinify" mapstructure:"xmlMinify"`
+	RangeFold          bool           `json:"rangeFold" mapstructure:"rangeFold"`
 }
 
 type ExactRLE struct {
@@ -242,6 +243,7 @@ func DefaultConfig() Config {
 			BlankRun:           true,
 			ColorCompact:       true,
 			XmlMinify:          true,
+			RangeFold:          true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

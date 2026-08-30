@@ -136,6 +136,7 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"blank-run":           {},
 		"color-compact":       {},
 		"xml-minify":          {},
+		"range-fold":          {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -203,6 +204,7 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.BlankRun = false
 	cfg.Techniques.ColorCompact = false
 	cfg.Techniques.XmlMinify = false
+	cfg.Techniques.RangeFold = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)
