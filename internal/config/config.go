@@ -118,6 +118,7 @@ type Techniques struct {
 	ColorCompact       bool           `json:"colorCompact" mapstructure:"colorCompact"`
 	XmlMinify          bool           `json:"xmlMinify" mapstructure:"xmlMinify"`
 	RangeFold          bool           `json:"rangeFold" mapstructure:"rangeFold"`
+	UuidRemap          bool           `json:"uuidRemap" mapstructure:"uuidRemap"`
 }
 
 type ExactRLE struct {
@@ -244,6 +245,7 @@ func DefaultConfig() Config {
 			ColorCompact:       true,
 			XmlMinify:          true,
 			RangeFold:          true,
+			UuidRemap:          true,
 		},
 		Experimental: Experimental{
 			"ison":     false,

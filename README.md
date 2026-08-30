@@ -169,6 +169,7 @@ fall back to the original bytes.
 | url-decode | `url-decode` | ✅ | Decodes `%XX` percent-encoding runs (multi-byte UTF-8 aware) into the characters they represent; malformed escapes stay literal |
 | unicode-unescape | `unicode-unescape` | ✅ | Unfolds `\uXXXX` JSON escape runs into the characters they encode (surrogate pairs included) — per RFC 8259 both forms are the identical string, but escaped Cyrillic/CJK costs up to 3.6× more tokens |
 | uuid-compact | `uuid-compact` | ✅ | Strips presentation dashes from canonical UUIDs (byte-exact re-dash round-trip) |
+| uuid-remap | `uuid-remap` | ✅ | Session-scoped remapper: repeat UUID sightings collapse to `§uid:N§` markers (canonical-first, byte-exact expand); bounded at 10k entries |
 | smart-punct | `smart-punct` | ✅ | Normalizes typographic quote and ellipsis artifacts to ASCII; Cyrillic guillemets and the em dash are preserved as grammar |
 | mojibake-fix | `mojibake-fix` | ✅ | Repairs UTF-8-read-as-Windows-1252 sequences (`â€™` → `'`) with an explicit bounded table |
 | idn-decode | `idn-decode` | ✅ | Unfolds `xn--` Punycode labels (RFC 3492) into their Unicode domain form |

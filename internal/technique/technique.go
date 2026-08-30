@@ -50,6 +50,7 @@ var definitions = []Definition{
 	{ID: "unicode-unescape", CodecID: "unicode-unescape"},
 	{ID: "url-decode", CodecID: "url-decode"},
 	{ID: "uuid-compact", CodecID: "uuid-compact"},
+	{ID: "uuid-remap", CodecID: "uuid-remap"},
 	{ID: "xml-cdata", CodecID: "xml-cdata"},
 	{ID: "xml-minify", CodecID: "xml-minify"},
 }

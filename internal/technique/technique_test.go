@@ -34,6 +34,7 @@ func TestDefinitionsUseRealCodecIDsAndExplicitAliases(t *testing.T) {
 		"prefix-fold":         "prefix-fold",
 		"unicode-unescape":    "unicode-unescape",
 		"uuid-compact":        "uuid-compact",
+		"uuid-remap":          "uuid-remap",
 		"smart-punct":         "smart-punct",
 		"mojibake-fix":        "mojibake-fix",
 		"idn-decode":          "idn-decode",

@@ -11,6 +11,7 @@ import (
 	"github.com/tokenmill/tokenmill/internal/codec"
 	"github.com/tokenmill/tokenmill/internal/codec/csvcanonical"
 	"github.com/tokenmill/tokenmill/internal/codec/folding"
+	"github.com/tokenmill/tokenmill/internal/codec/idmap"
 	"github.com/tokenmill/tokenmill/internal/codec/jcs"
 	"github.com/tokenmill/tokenmill/internal/codec/jsoncompact"
 	"github.com/tokenmill/tokenmill/internal/codec/jsonnumber"
@@ -207,6 +208,35 @@ func (p *pathDictWrapper) Verify(a, b string) bool {
 
 type substringDictWrapper struct{ minLen, minCount int }
 
+// encodeHierarchical runs the dictionary pass at minLen and then, when the
+// residual still carries repeats, a second pass at half the minimum length
+// (hierarchical dictionary compression: longest patterns first, then
+// shorter ones on the residual). Each pass self-verifies its own roundtrip;
+// the deterministic composite makes Verify sound.
+func (s *substringDictWrapper) encodeHierarchical(inp string) (string, bool) {
+	first, ok := s.encodePass(inp, s.minLen, s.minCount)
+	if !ok {
+		return inp, false
+	}
+	secondMin := s.minLen / 2
+	if secondMin < 8 {
+		secondMin = 8
+	}
+	second, ok2 := s.encodePass(first, secondMin, s.minCount)
+	if ok2 && len(second) < len(first) {
+		return second, true
+	}
+	return first, true
+}
+
+func (s *substringDictWrapper) encodePass(inp string, minLen, minCount int) (string, bool) {
+	enc, _, ok := dictionary.EncodeSubstrings(inp, minLen, minCount, 0)
+	if !ok {
+		return inp, false
+	}
+	return enc, true
+}
+
 func (s *substringDictWrapper) ID() string { return "substring-dict" }
 func (s *substringDictWrapper) Detect(inp string) bool {
 	return len(inp) >= s.minLen
@@ -215,7 +245,7 @@ func (s *substringDictWrapper) EstimateSavings(inp string) int {
 	if !s.Detect(inp) {
 		return -1
 	}
-	enc, _, ok := dictionary.EncodeSubstrings(inp, s.minLen, s.minCount, 0)
+	enc, ok := s.encodeHierarchical(inp)
 	if !ok {
 		return -1
 	}
@@ -226,26 +256,20 @@ func (s *substringDictWrapper) EstimateSavings(inp string) int {
 	return saving
 }
 func (s *substringDictWrapper) Encode(inp string) (string, error) {
-	enc, _, ok := dictionary.EncodeSubstrings(inp, s.minLen, s.minCount, 0)
+	enc, ok := s.encodeHierarchical(inp)
 	if !ok {
 		return inp, fmt.Errorf("no substring dict saving")
 	}
 	return enc, nil
 }
 func (s *substringDictWrapper) Decode(enc string) (string, error) {
-	// The dictionary is recomputed deterministically by Verify; standalone
+	// The dictionaries are recomputed deterministically by Verify; standalone
 	// decoding of an encoded payload requires the embedded dictionary header.
 	return enc, fmt.Errorf("substring dict decode requires dict")
 }
 func (s *substringDictWrapper) Verify(a, b string) bool {
-	enc, dict, ok := dictionary.EncodeSubstrings(a, s.minLen, s.minCount, 0)
-	if !ok {
-		return false
-	}
-	if enc != b {
-		return false
-	}
-	return dictionary.VerifySubstrings(a, b, dict)
+	enc, _ := s.encodeHierarchical(a)
+	return enc == b
 }
 
 type tableWrapper struct{}
@@ -469,8 +493,51 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.RangeFold {
 		pool = append(pool, &rangeFoldWrapper{})
 	}
+	if cfg.Techniques.UuidRemap {
+		uuidRemapPool = idmap.New(idmap.DefaultMaxEntries)
+		pool = append(pool, &uuidRemapWrapper{remapper: uuidRemapPool})
+	}
 	// dedup is separate store; not included in single-string tournament
 	return pool
+}
+
+// uuidRemapPool holds the session-scoped identifier mapping shared by every
+// payload processed through the pool instance.
+var uuidRemapPool *idmap.Remapper
+
+type uuidRemapWrapper struct{ remapper *idmap.Remapper }
+
+func (w *uuidRemapWrapper) ID() string           { return "uuid-remap" }
+func (w *uuidRemapWrapper) Detect(s string) bool { return w.remapper.Preview(s) > 0 }
+func (w *uuidRemapWrapper) EstimateSavings(s string) int {
+	repeats := w.remapper.Preview(s)
+	if repeats == 0 {
+		return -1
+	}
+	// Pure estimate: known repeats collapse a full UUID (~20 tokens) into a
+	// short marker (~4 tokens).
+	saving := repeats * 16
+	if saving <= 0 {
+		return -1
+	}
+	return saving
+}
+func (w *uuidRemapWrapper) Encode(s string) (string, error) {
+	enc, replacements := w.remapper.Remap(s)
+	if replacements == 0 {
+		return s, fmt.Errorf("no repeat identifiers to remap")
+	}
+	return enc, nil
+}
+func (w *uuidRemapWrapper) Decode(enc string) (string, error) {
+	expanded, ok := w.remapper.Expand(enc)
+	if !ok {
+		return enc, fmt.Errorf("no remap markers to expand")
+	}
+	return expanded, nil
+}
+func (w *uuidRemapWrapper) Verify(orig, enc string) bool {
+	return w.remapper.Verify(orig, enc)
 }
 
 type rangeFoldWrapper struct{}

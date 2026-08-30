@@ -120,6 +120,7 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"prefix-fold":         {},
 		"unicode-unescape":    {},
 		"uuid-compact":        {},
+		"uuid-remap":          {},
 		"smart-punct":         {},
 		"mojibake-fix":        {},
 		"idn-decode":          {},
@@ -188,6 +189,7 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.PrefixFold = false
 	cfg.Techniques.UnicodeUnescape = false
 	cfg.Techniques.UUIDCompact = false
+	cfg.Techniques.UuidRemap = false
 	cfg.Techniques.SmartPunct = false
 	cfg.Techniques.MojibakeFix = false
 	cfg.Techniques.IdnDecode = false

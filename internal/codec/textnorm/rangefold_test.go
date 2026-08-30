@@ -45,6 +45,18 @@ func TestFoldRangesShortRunUntouched(t *testing.T) {
 	}
 }
 
+func TestFoldRangesStep10(t *testing.T) {
+	input := "ticks 10, 20, 30, 40, 50 done"
+	want := "ticks 10..50 step 10[, ] done"
+	folded := FoldRanges(input)
+	if folded != want {
+		t.Fatalf("got %q, want %q", folded, want)
+	}
+	if UnfoldRanges(folded) != input {
+		t.Fatal("step-10 unfold mismatch")
+	}
+}
+
 func TestUnfoldRangesMalformedEnvelopeUntouched(t *testing.T) {
 	input := "range 500..1[, ] reversed"
 	if got := UnfoldRanges(input); got != input {

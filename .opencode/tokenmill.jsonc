@@ -70,7 +70,8 @@
     "blankRun": true,
     "colorCompact": true,
     "xmlMinify": true,
-    "rangeFold": true
+    "rangeFold": true,
+    "uuidRemap": true
   },
   "experimental": {
     "gcfGraph": false,
