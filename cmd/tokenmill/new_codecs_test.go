@@ -144,6 +144,19 @@ func TestBuildPoolRegistersEveryEnabledNewCodec(t *testing.T) {
 		"color-compact":       {},
 		"xml-minify":          {},
 		"range-fold":          {},
+		"badge-strip":         {},
+		"crlf-to-lf":          {},
+		"doubled-words":       {},
+		"edge-blanks":         {},
+		"empty-headings":      {},
+		"frontmatter-strip":   {},
+		"horiz-rules":         {},
+		"html-comments":       {},
+		"list-markers":        {},
+		"setext-to-atx":       {},
+		"toc-strip":           {},
+		"unicode-lsep":        {},
+		"variation-sel":       {},
 	}
 	got := make(map[string]struct{}, len(pool))
 	for _, candidate := range pool {
@@ -219,6 +232,31 @@ func TestBuildPoolExcludesDisabledNewCodecs(t *testing.T) {
 	cfg.Techniques.ColorCompact = false
 	cfg.Techniques.XmlMinify = false
 	cfg.Techniques.RangeFold = false
+	cfg.Techniques.UuidRemap = false
+	cfg.Techniques.CrlfToLf = false
+	cfg.Techniques.EdgeBlanks = false
+	cfg.Techniques.UnicodeLsep = false
+	cfg.Techniques.VariationSel = false
+	cfg.Techniques.HtmlComments = false
+	cfg.Techniques.SetextToAtx = false
+	cfg.Techniques.ListMarkers = false
+	cfg.Techniques.HorizRules = false
+	cfg.Techniques.TocStrip = false
+	cfg.Techniques.BadgeStrip = false
+	cfg.Techniques.FrontmatterStrip = false
+	cfg.Techniques.EmptyHeadings = false
+	cfg.Techniques.DoubledWords = false
+	cfg.Techniques.CrlfToLf = false
+	cfg.Techniques.EdgeBlanks = false
+	cfg.Techniques.UnicodeLsep = false
+	cfg.Techniques.VariationSel = false
+	cfg.Techniques.HtmlComments = false
+	cfg.Techniques.SetextToAtx = false
+	cfg.Techniques.ListMarkers = false
+	cfg.Techniques.HorizRules = false
+	cfg.Techniques.TocStrip = false
+	cfg.Techniques.BadgeStrip = false
+	cfg.Techniques.FrontmatterStrip = false
 
 	if pool := buildPool(cfg); len(pool) != 0 {
 		t.Fatalf("all-disabled config produced %d codecs: %v", len(pool), pool)

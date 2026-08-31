@@ -118,6 +118,19 @@ type Techniques struct {
 	QuotedPrintable    bool           `json:"quotedPrintable" mapstructure:"quotedPrintable"`
 	BaseNorm           bool           `json:"baseNorm" mapstructure:"baseNorm"`
 	SemverNorm         bool           `json:"semverNorm" mapstructure:"semverNorm"`
+	CrlfToLf           bool           `json:"crlfToLf" mapstructure:"crlfToLf"`
+	EdgeBlanks         bool           `json:"edgeBlanks" mapstructure:"edgeBlanks"`
+	UnicodeLsep        bool           `json:"unicodeLsep" mapstructure:"unicodeLsep"`
+	VariationSel       bool           `json:"variationSel" mapstructure:"variationSel"`
+	HtmlComments       bool           `json:"htmlComments" mapstructure:"htmlComments"`
+	SetextToAtx        bool           `json:"setextToAtx" mapstructure:"setextToAtx"`
+	ListMarkers        bool           `json:"listMarkers" mapstructure:"listMarkers"`
+	HorizRules         bool           `json:"horizRules" mapstructure:"horizRules"`
+	TocStrip           bool           `json:"tocStrip" mapstructure:"tocStrip"`
+	BadgeStrip         bool           `json:"badgeStrip" mapstructure:"badgeStrip"`
+	FrontmatterStrip   bool           `json:"frontmatterStrip" mapstructure:"frontmatterStrip"`
+	EmptyHeadings      bool           `json:"emptyHeadings" mapstructure:"emptyHeadings"`
+	DoubledWords       bool           `json:"doubledWords" mapstructure:"doubledWords"`
 	NfkcFold           bool           `json:"nfkcFold" mapstructure:"nfkcFold"`
 	TrailingWs         bool           `json:"trailingWs" mapstructure:"trailingWs"`
 	BlankRun           bool           `json:"blankRun" mapstructure:"blankRun"`
@@ -251,6 +264,19 @@ func DefaultConfig() Config {
 			QuotedPrintable:    true,
 			BaseNorm:           true,
 			SemverNorm:         true,
+			CrlfToLf:           true,
+			EdgeBlanks:         true,
+			UnicodeLsep:        true,
+			VariationSel:       true,
+			HtmlComments:       true,
+			SetextToAtx:        true,
+			ListMarkers:        true,
+			HorizRules:         true,
+			TocStrip:           true,
+			BadgeStrip:         true,
+			FrontmatterStrip:   true,
+			EmptyHeadings:      true,
+			DoubledWords:       true,
 			NfkcFold:           true,
 			TrailingWs:         true,
 			BlankRun:           true,

@@ -493,6 +493,45 @@ func buildPool(cfg config.Config) []codec.LosslessCodec {
 	if cfg.Techniques.SemverNorm {
 		pool = append(pool, &semverNormWrapper{})
 	}
+	if cfg.Techniques.CrlfToLf {
+		pool = append(pool, &crlfToLfWrapper{})
+	}
+	if cfg.Techniques.EdgeBlanks {
+		pool = append(pool, &edgeBlanksWrapper{})
+	}
+	if cfg.Techniques.UnicodeLsep {
+		pool = append(pool, &unicodeLsepWrapper{})
+	}
+	if cfg.Techniques.VariationSel {
+		pool = append(pool, &variationSelWrapper{})
+	}
+	if cfg.Techniques.HtmlComments {
+		pool = append(pool, &htmlCommentsWrapper{})
+	}
+	if cfg.Techniques.SetextToAtx {
+		pool = append(pool, &setextToAtxWrapper{})
+	}
+	if cfg.Techniques.ListMarkers {
+		pool = append(pool, &listMarkersWrapper{})
+	}
+	if cfg.Techniques.HorizRules {
+		pool = append(pool, &horizRulesWrapper{})
+	}
+	if cfg.Techniques.TocStrip {
+		pool = append(pool, &tocStripWrapper{})
+	}
+	if cfg.Techniques.BadgeStrip {
+		pool = append(pool, &badgeStripWrapper{})
+	}
+	if cfg.Techniques.FrontmatterStrip {
+		pool = append(pool, &frontmatterStripWrapper{})
+	}
+	if cfg.Techniques.EmptyHeadings {
+		pool = append(pool, &emptyHeadingsWrapper{})
+	}
+	if cfg.Techniques.DoubledWords {
+		pool = append(pool, &doubledWordsWrapper{})
+	}
 	if cfg.Techniques.NfkcFold {
 		pool = append(pool, &nfkcFoldWrapper{})
 	}
